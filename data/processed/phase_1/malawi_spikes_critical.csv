@@ -1,0 +1,216 @@
+date,region,district,market,market_id,latitude,longitude,category,commodity,commodity_id,unit,priceflag,pricetype,currency,price,usdprice,month,year,pct_change,zscore,is_spike,spike_severity
+2025-04-15,Southern Region,Balaka,Balaka Boma,763,-14.99,34.96,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,923.53,0.54,4,2025,176.50598802395209,3.0414952667949304,True,Critical
+2025-02-15,Southern Region,Balaka,Balaka Boma,763,-14.99,34.96,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1387.5,0.81,2,2025,61.337209302325576,2.6056943387319627,True,Critical
+2023-09-15,Southern Region,Balaka,Balaka Boma,763,-14.99,34.96,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1100.0,1.0,9,2023,69.23076923076923,2.777255977541147,True,Critical
+2024-09-15,Southern Region,Balaka,Mbela,2234,-14.91,35.06,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,5400.0,3.13,9,2024,116.00000000000001,2.7649756485070713,True,Critical
+2025-04-15,Southern Region,Balaka,Mbela,2234,-14.91,35.06,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,979.41,0.57,4,2025,179.83142857142855,3.008074167338736,True,Critical
+2022-08-15,Southern Region,Balaka,Phalula,2235,-15.22,34.89,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,300.0,0.3,8,2022,100.0,2.9837946435445946,True,Critical
+2025-04-15,Southern Region,Balaka,Phalula,2235,-15.22,34.89,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,861.76,0.5,4,2025,146.21714285714287,2.984115298128862,True,Critical
+2025-04-15,Southern Region,Balaka,Ulongwe,2236,-14.85,35.17,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1175.0,0.68,4,2025,234.28165007112375,3.0880416273926654,True,Critical
+2025-04-15,Southern Region,Balaka,Ulongwe,2236,-14.85,35.17,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,4500.0,2.62,4,2025,172.72727272727272,2.904762794885305,True,Critical
+2025-09-15,Southern Region,Blantyre,Lirangwe,2230,-15.53,35.02,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1556.67,0.9,9,2025,357.8441176470588,3.117004718230798,True,Critical
+2024-01-15,Southern Region,Blantyre,Lirangwe,2230,-15.53,35.02,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,2750.0,1.65,1,2024,86.44067796610169,2.827414728419984,True,Critical
+2025-10-15,Southern Region,Blantyre,Lirangwe,2230,-15.53,35.02,cereals and tubers,Sorghum,65,KG,aggregate,Retail,MWK,5473.68,3.16,10,2025,375.9721739130435,2.783195115680482,True,Critical
+2026-02-15,Southern Region,Blantyre,Lunzu,784,-15.65,35.02,pulses and nuts,Groundnuts (shelled),119,KG,aggregate,Retail,MWK,16000.0,9.23,2,2026,77.77777777777777,2.6414722029863302,True,Critical
+2022-08-15,Southern Region,Blantyre,Lunzu,784,-15.65,35.02,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,353.5,0.35,8,2022,60.681818181818194,2.93170968098697,True,Critical
+2025-06-15,Southern Region,Blantyre,Lunzu,784,-15.65,35.02,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1000.0,0.58,6,2025,203.03030303030303,3.0448566789033418,True,Critical
+2025-10-15,Southern Region,Blantyre,Lunzu,784,-15.65,35.02,cereals and tubers,Millet,73,KG,aggregate,Retail,MWK,8333.33,4.81,10,2025,733.333,3.0129848865921316,True,Critical
+2025-09-15,Southern Region,Blantyre City,Bvumbwe,767,-15.93,35.08,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1550.0,0.89,9,2025,342.8571428571429,3.129725494236627,True,Critical
+2022-08-15,Southern Region,Chikwawa,Dyelatu,2124,-16.04,34.8,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,63.2183908045977,3.0040857655691977,True,Critical
+2025-09-15,Southern Region,Chikwawa,Dyelatu,2124,-16.04,34.8,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1573.91,0.91,9,2025,362.91470588235296,3.1253650132241204,True,Critical
+2024-02-15,Southern Region,Chikwawa,Dyelatu,2124,-16.04,34.8,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,2500.0,1.5,2,2024,78.57142857142858,2.637963778050974,True,Critical
+2022-08-15,Southern Region,Chikwawa,Nchalo,804,-16.27,34.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,75.30864197530865,2.8792089286780773,True,Critical
+2025-09-15,Southern Region,Chikwawa,Nchalo,804,-16.27,34.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1591.67,0.92,9,2025,354.7628571428572,3.1265840825127422,True,Critical
+2022-08-15,Southern Region,Chikwawa,Nkhate,2192,-16.15,34.96,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,67.05882352941177,2.9625625319876177,True,Critical
+2025-09-15,Southern Region,Chikwawa,Nkhate,2192,-16.15,34.96,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1300.0,0.75,9,2025,271.42857142857144,3.0801939409957875,True,Critical
+2022-08-15,Southern Region,Chikwawa,Tomali,2135,-16.18,34.77,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,61.36363636363635,2.9482028892667747,True,Critical
+2025-09-15,Southern Region,Chikwawa,Tomali,2135,-16.18,34.77,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1547.83,0.89,9,2025,336.0084507042253,3.1168950206222785,True,Critical
+2025-01-15,Southern Region,Chiradzulu,Chiradzulu Boma,773,-15.71,35.18,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1600.0,0.93,1,2025,60.00000000000001,2.754743378973724,True,Critical
+2025-04-15,Northern Region,Chitipa,Chitipa Boma,774,-9.72,33.27,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,3500.0,2.04,4,2025,75.0,2.654540475467582,True,Critical
+2022-09-15,Northern Region,Chitipa,Chitipa Boma,774,-9.72,33.27,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,330.0,0.33,9,2022,100.0,2.7635906965856027,True,Critical
+2025-09-15,Northern Region,Chitipa,Chitipa Boma,774,-9.72,33.27,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,989.67,0.57,9,2025,199.89999999999998,3.0739402171083987,True,Critical
+2022-09-15,Northern Region,Chitipa,Kameme,2117,-9.57,33.09,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,336.5,0.33,9,2022,92.28571428571428,2.918398455206554,True,Critical
+2025-09-15,Northern Region,Chitipa,Kameme,2117,-9.57,33.09,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,956.52,0.55,9,2025,184.2555720653789,3.0506166657299816,True,Critical
+2022-09-15,Northern Region,Chitipa,Nthalire,816,-10.35,33.65,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,330.0,0.33,9,2022,100.0,2.8436522130239648,True,Critical
+2025-09-15,Northern Region,Chitipa,Nthalire,816,-10.35,33.65,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1001.56,0.58,9,2025,203.5030303030303,3.076897394403376,True,Critical
+2022-08-15,Central Region,Dedza,Nsikawanjala,2114,-14.39,34.34,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,300.0,0.3,8,2022,66.66666666666667,2.8975070558916425,True,Critical
+2025-03-15,Central Region,Dedza,Nsikawanjala,2114,-14.39,34.34,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1600.0,0.93,3,2025,481.8181818181818,3.140375372455641,True,Critical
+2024-02-15,Central Region,Dedza,Ntakataka,3630,-14.22,34.51,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1850.0,1.11,2,2024,64.44444444444444,2.790411828197798,True,Critical
+2025-09-15,Central Region,Dowa,Dowa Boma,825,-13.68,33.98,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1275.0,0.74,9,2025,325.0,3.113668474323146,True,Critical
+2025-03-15,Central Region,Dowa,Dzaleka,2421,-13.66,33.87,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,5000.0,2.9,3,2025,62.45475635035642,2.5787850127872027,True,Critical
+2025-03-15,Central Region,Dowa,Dzaleka,2421,-13.66,33.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1700.0,0.99,3,2025,476.2711864406779,3.140153805303275,True,Critical
+2025-04-15,Central Region,Dowa,Mponela,795,-13.52,33.72,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,920.0,0.54,4,2025,206.66666666666669,3.096893719827395,True,Critical
+2023-10-15,Central Region,Dowa,Mponela,795,-13.52,33.72,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1216.67,1.06,10,2023,62.22266666666667,2.607955232266702,True,Critical
+2025-07-15,Central Region,Dowa,Mponela,795,-13.52,33.72,cereals and tubers,Rice,52,KG,aggregate,Retail,MWK,17000.0,9.81,7,2025,325.0,2.8302706139226723,True,Critical
+2025-03-15,Central Region,Dowa,Nambuma,831,-13.7,33.6,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,900.0,0.52,3,2025,205.08474576271186,3.0602755887288358,True,Critical
+2022-08-15,Central Region,Dowa,Nsungwi,2115,-13.53,33.46,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,330.0,0.32,8,2022,67.93893129770991,2.94610338947588,True,Critical
+2025-03-15,Central Region,Dowa,Nsungwi,2115,-13.53,33.46,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1800.0,1.04,3,2025,520.6896551724138,3.1460113308407,True,Critical
+2022-09-15,Northern Region,Karonga,Karonga Boma,779,-9.93,33.93,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,346.5,0.34,9,2022,82.36842105263158,2.984500953099739,True,Critical
+2025-09-15,Northern Region,Karonga,Karonga Boma,779,-9.93,33.93,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1150.87,0.66,9,2025,232.14141414141412,3.101053411067215,True,Critical
+2023-02-15,Northern Region,Karonga,Karonga Boma,779,-9.93,33.93,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1136.46,1.12,2,2023,133.12,2.51832473054536,True,Critical
+2025-04-15,Northern Region,Karonga,Karonga Boma,779,-9.93,33.93,cereals and tubers,Rice,52,KG,aggregate,Retail,MWK,2500.0,1.46,4,2025,284.61538461538464,2.6523735274587534,True,Critical
+2023-01-15,Northern Region,Karonga,Uliwa,2118,-10.45,34.21,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,1650.0,1.64,1,2023,83.33333333333333,3.0843276754138946,True,Critical
+2024-09-15,Northern Region,Karonga,Uliwa,2118,-10.45,34.21,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,3468.75,2.01,9,2024,73.4375,2.922278463633185,True,Critical
+2025-09-15,Northern Region,Karonga,Uliwa,2118,-10.45,34.21,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,4500.0,2.6,9,2025,155.1541130843029,2.9337677016105967,True,Critical
+2022-09-15,Northern Region,Karonga,Uliwa,2118,-10.45,34.21,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,332.5,0.33,9,2022,84.72222222222223,2.9512668627729792,True,Critical
+2025-09-15,Northern Region,Karonga,Uliwa,2118,-10.45,34.21,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1226.09,0.71,9,2025,268.7488721804511,3.1240460111417283,True,Critical
+2022-09-15,Central Region,Kasungu,Kasungu Boma,780,-13.03,33.48,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,303.5,0.3,9,2022,89.68750000000001,2.976163288680722,True,Critical
+2025-04-15,Central Region,Kasungu,Kasungu Boma,780,-13.03,33.48,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1264.58,0.74,4,2025,316.665568369028,3.135276462098993,True,Critical
+2025-02-15,Central Region,Kasungu,Kasungu Boma,780,-13.03,33.48,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1352.63,0.79,2,2025,103.40300751879701,2.808409480619907,True,Critical
+2025-04-15,Central Region,Kasungu,Nkhamenya,807,-12.57,33.52,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1330.0,0.77,4,2025,383.6363636363636,3.1340727789367304,True,Critical
+2025-02-15,Central Region,Kasungu,Nkhamenya,807,-12.57,33.52,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1381.25,0.8,2,2025,104.62962962962963,2.866284162130566,True,Critical
+2025-02-15,Central Region,Lilongwe,Area 23,2111,-14.03,33.49,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,6000.0,3.48,2,2025,80.82201688877639,2.617852528083353,True,Critical
+2025-02-15,Central Region,Lilongwe,Area 23,2111,-14.03,33.49,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,3500.0,2.03,2,2025,81.60403057174138,2.6174791759938287,True,Critical
+2025-09-15,Central Region,Lilongwe,Area 23,2111,-14.03,33.49,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1222.22,0.7,9,2025,618.9529411764706,2.7880519537652435,True,Critical
+2023-01-15,Central Region,Lilongwe,Kamwendo,2223,-13.82,34.02,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,2000.0,1.99,1,2023,100.0,2.607221278271737,True,Critical
+2025-04-15,Central Region,Lilongwe,Kamwendo,2223,-13.82,34.02,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,770.0,0.45,4,2025,167.82608695652175,3.0559920525532243,True,Critical
+2025-02-15,Central Region,Lilongwe,Kamwendo,2223,-13.82,34.02,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1326.32,0.77,2,2025,76.84266666666666,2.5137393136499546,True,Critical
+2025-09-15,Southern Region,Machinga,Chikweo,2119,-14.77,35.67,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1586.67,0.92,9,2025,373.63283582089554,3.1251869313839338,True,Critical
+2022-08-15,Southern Region,Machinga,Liwonde,782,-15.07,35.23,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,75.30864197530865,2.7551844741285625,True,Critical
+2025-09-15,Southern Region,Machinga,Liwonde,782,-15.07,35.23,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1482.61,0.86,9,2025,323.60285714285715,3.122030586340417,True,Critical
+2025-09-15,Southern Region,Machinga,Mangamba,2127,-14.79,35.44,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1500.0,0.87,9,2025,316.6666666666667,3.086678860412614,True,Critical
+2023-12-15,Southern Region,Machinga,Mangamba,2127,-14.79,35.44,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1650.0,0.99,12,2023,64.99999999999999,2.9686903129270763,True,Critical
+2025-04-15,Southern Region,Machinga,Mangochi Turn Off,1921,-15.04,35.19,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,973.53,0.57,4,2025,190.60597014925372,2.9689095771758356,True,Critical
+2024-02-15,Southern Region,Machinga,Mangochi Turn Off,1921,-15.04,35.19,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1695.45,1.02,2,2024,63.02403846153845,2.7001398284885285,True,Critical
+2022-08-15,Southern Region,Machinga,Mbonechela,2191,-14.89,35.48,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,345.0,0.34,8,2022,64.28571428571428,2.8160274409409696,True,Critical
+2025-09-15,Southern Region,Machinga,Mbonechela,2191,-14.89,35.48,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1482.61,0.86,9,2025,317.6366197183098,3.1140872476883628,True,Critical
+2023-12-15,Southern Region,Machinga,Mbonechela,2191,-14.89,35.48,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1650.0,0.99,12,2023,69.23076923076923,2.8683199831635937,True,Critical
+2024-05-15,Southern Region,Machinga,Mpita,2129,-15.19,35.47,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,4000.0,2.31,5,2024,60.00000000000001,2.6409809114298635,True,Critical
+2024-02-15,Southern Region,Machinga,Mpita,2129,-15.19,35.47,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1950.0,1.17,2,2024,62.5,2.6784923179521583,True,Critical
+2022-08-15,Southern Region,Machinga,Mpita,2129,-15.19,35.47,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,342.5,0.34,8,2022,71.24999999999999,2.654049047428956,True,Critical
+2025-09-15,Southern Region,Machinga,Mpita,2129,-15.19,35.47,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1570.0,0.91,9,2025,390.625,3.137639237622104,True,Critical
+2024-02-15,Southern Region,Machinga,Mpita,2129,-15.19,35.47,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,2350.0,1.41,2,2024,95.83333333333333,2.7407292373873866,True,Critical
+2025-04-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,cereals and tubers,Cassava,68,KG,aggregate,Retail,MWK,3200.0,1.86,4,2025,700.0,2.6627492103107593,True,Critical
+2025-09-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1287.83,0.74,9,2025,315.4290322580645,3.141568076276907,True,Critical
+2023-01-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,503.75,0.5,1,2023,235.83333333333334,2.5123719717639723,True,Critical
+2025-10-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,cereals and tubers,Millet,73,KG,aggregate,Retail,MWK,3331.58,1.92,10,2025,375.94000000000005,2.6485291782655804,True,Critical
+2025-03-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,oil and fats,Oil (vegetable),96,L,aggregate,Retail,MWK,6500.0,3.77,3,2025,400.0,2.632312061285275,True,Critical
+2025-09-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,cereals and tubers,Rice,52,KG,aggregate,Retail,MWK,4000.0,2.31,9,2025,515.3846153846155,2.6651543677632192,True,Critical
+2025-03-15,Southern Region,Machinga,Nayuchi,2131,-14.98,35.87,miscellaneous food,Sugar,97,KG,aggregate,Retail,MWK,4000.0,2.32,3,2025,400.0,2.6648360041230688,True,Critical
+2025-09-15,Southern Region,Machinga,Nsanama,2132,-15.0,35.49,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1480.0,0.85,9,2025,316.9014084507042,3.1169857604191855,True,Critical
+2024-01-15,Southern Region,Machinga,Nsanama,2132,-15.0,35.49,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,2955.0,1.77,1,2024,97.0,2.892319152320891,True,Critical
+2025-03-15,Southern Region,Machinga,Nserema,2133,-14.72,35.55,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1500.0,0.87,3,2025,328.57142857142856,3.1103576979998473,True,Critical
+2025-04-15,Southern Region,Mangochi,Makanjira,3628,-13.71,35.04,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1400.0,0.82,4,2025,366.6666666666667,3.065214257738479,True,Critical
+2025-09-15,Southern Region,Mangochi,Makanjira,3628,-13.71,35.04,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,3800.0,2.19,9,2025,153.33333333333331,2.7080836048865593,True,Critical
+2025-04-15,Southern Region,Mangochi,Mangochi Boma,787,-14.48,35.26,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1205.88,0.7,4,2025,247.01582733812955,3.1263949501768433,True,Critical
+2025-02-15,Southern Region,Mangochi,Mangochi Boma,787,-14.48,35.26,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1662.5,0.96,2,2025,96.7455621301775,2.9977483009007417,True,Critical
+2025-04-15,Central Region,Mchinji,Mchinji Boma,789,-13.8,32.9,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,820.59,0.48,4,2025,188.94014084507043,3.0649440343522376,True,Critical
+2025-02-15,Central Region,Mchinji,Mchinji Boma,789,-13.8,32.9,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1275.0,0.74,2,2025,70.0,2.549820560940986,True,Critical
+2025-02-15,Central Region,Mchinji,Mkanda,792,-13.52,32.95,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1302.63,0.76,2,2025,88.78695652173914,2.621932416480378,True,Critical
+2022-05-15,Central Region,Mchinji,Waliranji,2116,-13.98,33.28,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,6100.0,7.54,5,2022,838.4615384615385,3.006155643131807,True,Critical
+2025-04-15,Central Region,Mchinji,Waliranji,2116,-13.98,33.28,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,941.67,0.55,4,2025,245.5669724770642,3.1034228588953185,True,Critical
+2025-02-15,Central Region,Mchinji,Waliranji,2116,-13.98,33.28,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1307.89,0.76,2,2025,80.39862068965517,2.6307759698735707,True,Critical
+2025-04-15,Southern Region,Mulanje,Chinakanaka,2121,-15.99,35.4,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,935.0,0.54,4,2025,166.0028449502134,3.06811543281179,True,Critical
+2026-03-15,Southern Region,Mulanje,Chinakanaka,2121,-15.99,35.4,cereals and tubers,Sweet potatoes,87,KG,aggregate,Retail,MWK,2778.0,1.6,3,2026,399.64028776978415,3.0261227841195986,True,Critical
+2023-01-15,Southern Region,Mulanje,Chitakale,2123,-16.01,35.49,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,2300.0,2.29,1,2023,84.00000000000001,2.9393535416695196,True,Critical
+2022-09-15,Southern Region,Mulanje,Chitakale,2123,-16.01,35.49,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,9,2022,77.49999999999999,3.037351795891765,True,Critical
+2025-04-15,Southern Region,Mulanje,Chitakale,2123,-16.01,35.49,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1204.17,0.7,4,2025,239.20281690140848,3.121786791297516,True,Critical
+2025-04-15,Southern Region,Mulanje,Limbuli,2126,-16.07,35.71,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,913.33,0.53,4,2025,156.19354838709677,3.0591667847786876,True,Critical
+2023-09-15,Southern Region,Mulanje,Limbuli,2126,-16.07,35.71,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1475.0,1.35,9,2023,73.52941176470588,2.8286131879661,True,Critical
+2022-09-15,Southern Region,Mulanje,Mulanje Boma,2130,-16.03,35.5,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,370.0,0.36,9,2022,68.18181818181819,3.0097965338946278,True,Critical
+2025-04-15,Southern Region,Mulanje,Mulanje Boma,2130,-16.03,35.5,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1233.33,0.72,4,2025,233.3324324324324,3.1125613516915167,True,Critical
+2023-04-15,Southern Region,Mulanje,Muloza,797,-16.08,35.73,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1175.0,1.16,4,2023,67.85714285714286,2.936068873186228,True,Critical
+2022-09-15,Southern Region,Mulanje,Muloza,797,-16.08,35.73,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,361.5,0.36,9,2022,64.31818181818181,2.849107383187032,True,Critical
+2025-04-15,Southern Region,Mulanje,Muloza,797,-16.08,35.73,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,893.75,0.52,4,2025,147.23374827109268,3.054033691311052,True,Critical
+2023-09-15,Southern Region,Mulanje,Muloza,797,-16.08,35.73,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1600.0,1.46,9,2023,88.23529411764706,2.589871150344467,True,Critical
+2022-09-15,Southern Region,Mwanza,Mwanza Boma,799,-15.6,34.52,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,365.0,0.36,9,2022,82.5,3.0570793604419375,True,Critical
+2025-04-15,Southern Region,Mwanza,Mwanza Boma,799,-15.6,34.52,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1139.58,0.66,4,2025,212.21369863013697,3.101944885510101,True,Critical
+2025-02-15,Southern Region,Mwanza,Mwanza Boma,799,-15.6,34.52,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1468.42,0.85,2,2025,63.15777777777778,2.524272354683298,True,Critical
+2024-01-15,Southern Region,Mwanza,Mwanza Boma,799,-15.6,34.52,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,2400.0,1.44,1,2024,65.51724137931035,2.646445758751635,True,Critical
+2025-09-15,Northern Region,Mzimba,Euthini,2227,-11.45,33.42,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1128.26,0.65,9,2025,362.40163934426226,3.131895257419647,True,Critical
+2025-01-15,Northern Region,Mzimba,Euthini,2227,-11.45,33.42,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1200.0,0.7,1,2025,100.0,2.7841949927368104,True,Critical
+2023-01-15,Northern Region,Mzimba,Jenda,828,-12.35,33.55,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,1700.0,1.69,1,2023,100.0,2.963871139588518,True,Critical
+2023-01-15,Northern Region,Mzimba,Jenda,828,-12.35,33.55,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1200.0,1.19,1,2023,166.66666666666666,2.8658821595723785,True,Critical
+2025-05-15,Northern Region,Mzimba,Jenda,828,-12.35,33.55,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,550.0,0.32,5,2025,103.70370370370372,2.934129553703942,True,Critical
+2025-09-15,Northern Region,Mzimba,Jenda,828,-12.35,33.55,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1171.74,0.68,9,2025,113.04363636363637,2.907686429362861,True,Critical
+2025-01-15,Northern Region,Mzimba,Jenda,828,-12.35,33.55,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1100.0,0.64,1,2025,69.23076923076923,2.7404069378207554,True,Critical
+2022-09-15,Northern Region,Mzimba,Manyamula,2228,-11.94,33.45,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,300.0,0.3,9,2022,76.47058823529412,2.922844866037911,True,Critical
+2025-04-15,Northern Region,Mzimba,Manyamula,2228,-11.94,33.45,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,833.33,0.49,4,2025,177.7766666666667,3.057554279213667,True,Critical
+2025-02-15,Southern Region,Neno,Neno Boma,805,-15.4,34.65,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,4000.0,2.32,2,2025,60.00000000000001,2.541820818537344,True,Critical
+2022-09-15,Southern Region,Neno,Neno Boma,805,-15.4,34.65,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,363.5,0.36,9,2022,81.74999999999999,2.81165025440513,True,Critical
+2025-04-15,Southern Region,Neno,Neno Boma,805,-15.4,34.65,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,925.0,0.54,4,2025,154.47042640990372,3.0419930733296456,True,Critical
+2025-02-15,Southern Region,Neno,Neno Boma,805,-15.4,34.65,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1568.42,0.91,2,2025,76.22696629213483,2.7634527464248837,True,Critical
+2024-09-15,Northern Region,Nkhata Bay,Chintheche,772,-11.83,34.17,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,3912.5,2.27,9,2024,86.30952380952381,2.5213847185544647,True,Critical
+2025-02-15,Northern Region,Nkhata Bay,Chintheche,772,-11.83,34.17,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,3500.0,2.03,2,2025,87.80451160095298,2.505031362654457,True,Critical
+2025-02-15,Northern Region,Nkhata Bay,Chintheche,772,-11.83,34.17,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1371.05,0.8,2,2025,79.22222222222221,2.729561996146254,True,Critical
+2024-01-15,Northern Region,Nkhata Bay,Nkhatabay Boma,808,-11.61,34.3,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1664.71,1.0,1,2024,103.01341463414633,2.9999150695031327,True,Critical
+2022-09-15,Central Region,Nkhotakota,Nkhotakota Boma,810,-12.92,34.3,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,307.5,0.3,9,2022,70.83333333333333,2.771552005376863,True,Critical
+2025-04-15,Central Region,Nkhotakota,Nkhotakota Boma,810,-12.92,34.3,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,850.0,0.5,4,2025,176.42276422764226,3.0752318153700937,True,Critical
+2025-02-15,Central Region,Nkhotakota,Nkhotakota Boma,810,-12.92,34.3,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1352.63,0.79,2,2025,69.07875000000001,2.719214041782239,True,Critical
+2023-06-15,Southern Region,Nsanje,Bangula,764,-16.57,35.12,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1200.0,1.18,6,2023,71.42857142857142,2.57111288620538,True,Critical
+2025-09-15,Southern Region,Nsanje,Bangula,764,-16.57,35.12,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1533.33,0.88,9,2025,371.7938461538461,3.1232274638796875,True,Critical
+2025-09-15,Southern Region,Nsanje,Marka,2128,-17.12,35.23,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1386.67,0.8,9,2025,285.18611111111113,3.1027499151157008,True,Critical
+2024-03-15,Southern Region,Nsanje,Marka,2128,-17.12,35.23,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,2620.0,1.57,3,2024,191.1111111111111,3.0123301464447,True,Critical
+2022-08-15,Southern Region,Nsanje,Mtowe,3629,-17.08,35.22,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,360.0,0.35,8,2022,89.4736842105263,2.993416526216486,True,Critical
+2025-09-15,Southern Region,Nsanje,Mtowe,3629,-17.08,35.22,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1393.33,0.8,9,2025,287.0361111111111,3.108533979287462,True,Critical
+2025-09-15,Southern Region,Nsanje,Ngabu,806,-16.47,34.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1521.74,0.88,9,2025,338.5417867435159,3.1223969868748394,True,Critical
+2025-08-15,Southern Region,Nsanje,Ngabu,806,-16.47,34.87,cereals and tubers,Sweet potatoes,87,KG,aggregate,Retail,MWK,1111.11,0.64,8,2025,99.9982000143999,2.6708196658974726,True,Critical
+2022-08-15,Southern Region,Nsanje,Nsanje Boma,2193,-16.93,35.26,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,61.36363636363635,2.7595290078521315,True,Critical
+2025-09-15,Southern Region,Nsanje,Nsanje Boma,2193,-16.93,35.26,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1450.72,0.84,9,2025,314.4914285714286,3.121314123171714,True,Critical
+2025-09-15,Southern Region,Nsanje,Sorgin,811,-16.54,35.01,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1543.48,0.89,9,2025,347.3855072463768,3.0483533832877963,True,Critical
+2022-08-15,Central Region,Ntcheu,Chimbiya,771,-15.08,34.58,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,310.0,0.3,8,2022,74.64788732394365,2.9439830958071305,True,Critical
+2025-03-15,Central Region,Ntcheu,Chimbiya,771,-15.08,34.58,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1700.0,0.99,3,2025,466.6666666666667,3.1356801005167143,True,Critical
+2025-03-15,Central Region,Ntcheu,Golomoti,2224,-14.43,34.59,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1500.0,0.87,3,2025,400.0,3.1317198577291707,True,Critical
+2022-09-15,Central Region,Ntcheu,Kambilonje,2112,-15.0,34.67,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,302.5,0.3,9,2022,89.0625,2.8119229910838484,True,Critical
+2025-04-15,Central Region,Ntcheu,Kambilonje,2112,-15.0,34.67,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,875.0,0.51,4,2025,189.25619834710744,3.0790727355804255,True,Critical
+2025-02-15,Central Region,Ntcheu,Kambilonje,2112,-15.0,34.67,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1252.63,0.73,2,2025,67.01733333333335,2.5223939023400703,True,Critical
+2022-09-15,Central Region,Ntcheu,Ntcheu Boma,814,-14.82,34.63,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,330.0,0.33,9,2022,83.33333333333333,2.8913393035364487,True,Critical
+2025-04-15,Central Region,Ntcheu,Ntcheu Boma,814,-14.82,34.63,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,772.92,0.45,4,2025,134.2181818181818,3.0162170028882977,True,Critical
+2025-02-15,Central Region,Ntcheu,Ntcheu Boma,814,-14.82,34.63,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1348.68,0.78,2,2025,74.02322580645162,2.6833716289602303,True,Critical
+2025-04-15,Central Region,Ntchisi,Kamsonga,2125,-13.28,33.8,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1400.0,0.82,4,2025,391.22807017543863,3.148247725446844,True,Critical
+2024-02-15,Central Region,Ntchisi,Kamsonga,2125,-13.28,33.8,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,2200.0,1.32,2,2024,149.33416444721482,2.9290418888308634,True,Critical
+2025-04-15,Central Region,Ntchisi,Khuwi,2113,-13.43,33.83,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1626.47,0.95,4,2025,519.6076190476191,3.161669085343697,True,Critical
+2025-02-15,Central Region,Ntchisi,Khuwi,2113,-13.43,33.83,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1325.0,0.77,2,2025,70.96774193548387,2.830593228862843,True,Critical
+2022-09-15,Central Region,Ntchisi,Malomo,786,-13.15,33.83,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,273.5,0.27,9,2022,82.33333333333333,2.9549795128644836,True,Critical
+2025-04-15,Central Region,Ntchisi,Malomo,786,-13.15,33.83,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1694.12,0.99,4,2025,519.4223034734918,3.161581143123051,True,Critical
+2025-02-15,Central Region,Ntchisi,Malomo,786,-13.15,33.83,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1969.74,1.14,2,2025,162.63200000000003,2.9341927374755703,True,Critical
+2022-08-15,Central Region,Ntchisi,Nsundwe,812,-13.38,33.95,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,297.5,0.29,8,2022,65.27777777777777,2.6113892716605207,True,Critical
+2025-09-15,Central Region,Ntchisi,Nsundwe,812,-13.38,33.95,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1346.38,0.78,9,2025,295.99411764705883,3.1015827318098728,True,Critical
+2025-04-15,Central Region,Ntchisi,Ntchisi Boma,815,-13.37,33.92,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1587.25,0.92,4,2025,412.01612903225805,3.138969061552054,True,Critical
+2025-02-15,Central Region,Ntchisi,Ntchisi Boma,815,-13.37,33.92,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1315.79,0.76,2,2025,75.43866666666665,2.792656630358273,True,Critical
+2023-07-15,Southern Region,Phalombe,Chilinga,2120,-15.78,35.77,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,4737.5,4.56,7,2023,628.8461538461538,2.8352264282182764,True,Critical
+2025-10-15,Southern Region,Phalombe,Chilinga,2120,-15.78,35.77,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,5000.0,2.88,10,2025,66.66666666666667,2.763561140234841,True,Critical
+2022-08-15,Southern Region,Phalombe,Chilinga,2120,-15.78,35.77,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,350.0,0.34,8,2022,62.7906976744186,2.8058502732532475,True,Critical
+2025-03-15,Southern Region,Phalombe,Chilinga,2120,-15.78,35.77,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1000.0,0.58,3,2025,185.71428571428572,3.014052683122693,True,Critical
+2023-09-15,Southern Region,Phalombe,Chilinga,2120,-15.78,35.77,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1119.23,1.02,9,2023,79.07680000000002,2.6854107647431333,True,Critical
+2022-08-15,Southern Region,Phalombe,Migowi,830,-15.72,35.68,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,360.0,0.35,8,2022,73.49397590361446,2.9698634476058183,True,Critical
+2025-03-15,Southern Region,Phalombe,Migowi,830,-15.72,35.68,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1000.0,0.58,3,2025,185.71428571428572,3.015157601073802,True,Critical
+2025-03-15,Southern Region,Phalombe,Phalombe Boma,817,-15.81,35.65,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1000.0,0.58,3,2025,212.5,3.05478992843481,True,Critical
+2024-09-15,Northern Region,Rumphi,Bolero,2229,-10.98,33.74,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,3281.25,1.9,9,2024,87.5,2.6201966969726604,True,Critical
+2025-09-15,Northern Region,Rumphi,Bolero,2229,-10.98,33.74,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1250.0,0.72,9,2025,341.69611307420496,3.1374564650145844,True,Critical
+2025-02-15,Northern Region,Rumphi,Bolero,2229,-10.98,33.74,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1241.67,0.72,2,2025,112.25128205128208,2.606490842952203,True,Critical
+2024-09-15,Northern Region,Rumphi,Rumphi Boma,818,-11.02,33.87,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,3500.0,2.03,9,2024,75.0,2.6284321371199826,True,Critical
+2025-09-15,Northern Region,Rumphi,Rumphi Boma,818,-11.02,33.87,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1169.57,0.67,9,2025,269.5323854660347,3.1114441484983364,True,Critical
+2025-10-15,Northern Region,Rumphi,Rumphi Boma,818,-11.02,33.87,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,4500.0,2.6,10,2025,150.0,2.721511913414894,True,Critical
+2023-10-15,Central Region,Salima,Kamuzu Road,2225,-13.77,34.44,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,2966.67,2.58,10,2023,270.83375,3.1173455325255723,True,Critical
+2022-08-15,Central Region,Salima,Kamuzu Road,2225,-13.77,34.44,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,347.5,0.34,8,2022,73.75,2.733598472639085,True,Critical
+2025-03-15,Central Region,Salima,Kamuzu Road,2225,-13.77,34.44,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1800.0,1.04,3,2025,421.7391304347826,3.138326901708221,True,Critical
+2025-11-15,Central Region,Salima,Kamuzu Road,2225,-13.77,34.44,cereals and tubers,Sorghum,65,KG,aggregate,Retail,MWK,3500.0,2.02,11,2025,250.0,2.7688419197253107,True,Critical
+2022-08-15,Central Region,Salima,Thavite,2226,-13.5,34.26,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,340.0,0.33,8,2022,74.35897435897436,2.981219664564812,True,Critical
+2025-09-15,Central Region,Salima,Thavite,2226,-13.5,34.26,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1450.0,0.84,9,2025,383.3333333333333,3.120220479735728,True,Critical
+2025-03-15,Southern Region,Thyolo,Luncheza,3627,-16.02,35.31,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1800.0,1.04,3,2025,400.0,3.153939741351675,True,Critical
+2024-10-15,Southern Region,Thyolo,Thekerani,2231,-16.32,35.2,pulses and nuts,Beans,50,KG,aggregate,Retail,MWK,13550.0,7.81,10,2024,215.11627906976742,3.0727822292006777,True,Critical
+2022-08-15,Southern Region,Thyolo,Thekerani,2231,-16.32,35.2,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,352.5,0.35,8,2022,62.06896551724137,2.66640345862932,True,Critical
+2025-09-15,Southern Region,Thyolo,Thekerani,2231,-16.32,35.2,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1578.26,0.91,9,2025,350.93142857142857,3.1241328514898505,True,Critical
+2025-03-15,Southern Region,Thyolo,Thyolo Boma,2232,-16.07,35.15,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1200.0,0.7,3,2025,238.0281690140845,3.0908984871746052,True,Critical
+2022-09-15,Southern Region,Zomba,Chinamwali,2122,-15.38,35.36,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,351.5,0.35,9,2022,75.75,2.8356045561271697,True,Critical
+2025-04-15,Southern Region,Zomba,Chinamwali,2122,-15.38,35.36,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,950.0,0.55,4,2025,170.27027027027026,3.055488529790332,True,Critical
+2024-01-15,Southern Region,Zomba,Chinamwali,2122,-15.38,35.36,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1550.0,0.93,1,2024,63.1578947368421,2.5792505091751896,True,Critical
+2022-09-15,Southern Region,Zomba,Jali,778,-15.5,35.47,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,334.0,0.33,9,2022,75.78947368421052,2.9700193299977515,True,Critical
+2025-04-15,Southern Region,Zomba,Jali,778,-15.5,35.47,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,910.0,0.53,4,2025,172.45508982035926,3.077990782060103,True,Critical
+2025-02-15,Southern Region,Zomba,Jali,778,-15.5,35.47,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1425.0,0.83,2,2025,67.64705882352942,2.6491108997170305,True,Critical
+2023-09-15,Southern Region,Zomba,Jali,778,-15.5,35.47,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1250.0,1.14,9,2023,66.66666666666667,2.680129596677348,True,Critical
+2022-09-15,Southern Region,Zomba,Mayaka,788,-15.58,35.37,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,384.0,0.38,9,2022,74.54545454545453,2.851676908641971,True,Critical
+2025-04-15,Southern Region,Zomba,Mayaka,788,-15.58,35.37,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,941.67,0.55,4,2025,145.2265625,3.0191187226107288,True,Critical
+2025-02-15,Southern Region,Zomba,Mayaka,788,-15.58,35.37,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1369.44,0.79,2,2025,71.17999999999999,2.6769386571776144,True,Critical
+2025-05-15,Southern Region,Zomba,Mayaka,788,-15.58,35.37,cereals and tubers,Rice,52,KG,aggregate,Retail,MWK,3115.38,1.8,5,2025,379.2892307692308,2.6642036381481637,True,Critical
+2022-08-15,Southern Region,Zomba,Mulomba,2233,-15.76,35.52,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,355.0,0.35,8,2022,69.04761904761905,2.920933039169188,True,Critical
+2025-09-15,Southern Region,Zomba,Mulomba,2233,-15.76,35.52,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,1482.61,0.86,9,2025,317.6366197183098,3.1384933115406164,True,Critical
+2023-06-15,Southern Region,Zomba,Mulomba,2233,-15.76,35.52,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1200.0,1.18,6,2023,111.76346021493995,2.6684787619788386,True,Critical
+2025-04-15,Southern Region,Zomba,Songani,2134,-15.32,35.39,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,900.0,0.52,4,2025,154.23728813559322,3.0419671904218197,True,Critical
+2025-02-15,Southern Region,Zomba,Songani,2134,-15.32,35.39,cereals and tubers,Maize (new harvest),1229,KG,aggregate,Retail,MWK,1345.83,0.78,2,2025,68.22874999999999,2.5597521627585182,True,Critical
+2023-04-15,Southern Region,Zomba,Thondwe,823,-15.49,35.24,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,1100.0,1.08,4,2023,83.33333333333333,2.716853217674455,True,Critical
+2025-02-15,Southern Region,Zomba,Thondwe,823,-15.49,35.24,pulses and nuts,Cowpeas,218,KG,aggregate,Retail,MWK,3716.67,2.16,2,2025,85.8335,2.5053327748197662,True,Critical
+2022-09-15,Southern Region,Zomba,Thondwe,823,-15.49,35.24,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,333.5,0.33,9,2022,66.75,2.611740689905912,True,Critical
+2025-04-15,Southern Region,Zomba,Thondwe,823,-15.49,35.24,cereals and tubers,Maize,51,KG,aggregate,Retail,MWK,800.0,0.47,4,2025,139.880059970015,3.008191491581536,True,Critical
+2023-09-15,Southern Region,Zomba,Thondwe,823,-15.49,35.24,pulses and nuts,Pigeon peas,155,KG,aggregate,Retail,MWK,1300.0,1.19,9,2023,67.74193548387098,2.6374954104405823,True,Critical

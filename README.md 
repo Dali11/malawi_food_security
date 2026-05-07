@@ -1,0 +1,31 @@
+# Malawi Food Security GIS System
+
+Automated food price spike detection and 
+spatial analysis dashboard for Malawi — 
+covering 130 markets across 28 districts, 
+January 2020 to present.
+
+## What This Does
+- Detects food price spikes using dual-method 
+  ALPS methodology (WFP standard)
+- Classifies 30 districts by composite risk score
+- Serves live GeoJSON via FastAPI to a 
+  React-Leaflet web dashboard
+- Updates automatically monthly via cron pipeline
+
+## Key Findings (2020–2026)
+- Machinga: highest risk district (score: 436)
+- 72% of critical events involve maize
+- September 2025 post-harvest spike indicates 
+  structural supply failure
+- Southern Region: 56.7% of all critical events
+
+## Tech Stack
+Python · GeoPandas · PostGIS · FastAPI · 
+Next.js · React-Leaflet · QGIS · Debian Linux
+
+## Author
+Dalitso Kamphani
+GIS & Food Security Analyst
+Environmenta Management & Technology (BSc)
+Blantyre, Malawi
