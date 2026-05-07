@@ -101,4 +101,31 @@ Always verify count after each load:
 ```bash
 sudo -u postgres psql -d malawi_food_security -c "SELECT COUNT(*) FROM table_name;"
 ```
+
+
+#  ===========Phase 3 findings========================
+
+## Phase 3 Results — Spatial Query Findings
+
+### Monitoring Gap Analysis
+| District | Risk Score | Markets | Status       |
+|----------|------------|---------|--------------|
+| Likoma   | 0          | 0       | NO MONITORING|
+| Mulanje  | 277        | 5       | CRITICAL GAP |
+| Machinga | 436        | 8       | CRITICAL GAP |
+| Zomba    | 262        | 5       | CRITICAL GAP |
+| Chikwawa | 217        | 5       | CRITICAL GAP |
+| Karonga  | 104        | 2       | HIGH GAP     |
+
+### Key Spatial Findings
+- 44 of 113 markets (39%) within 100km of Blantyre
+- Thondwe (Zomba) is 37km from Blantyre with 10 critical spikes in 2025
+- Machinga markets 73–127km from Blantyre all had 12 critical spikes in 2025
+- 4 Southern Region districts classified as CRITICAL monitoring gap
+
+### PostgreSQL Type Casting Rule
+ST_Distance returns double precision — always cast before ROUND():
+```sql
+ROUND((ST_Distance(...) / 1000)::numeric, 1)
+```
 EOF

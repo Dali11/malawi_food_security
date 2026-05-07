@@ -37,4 +37,30 @@
 - Machinga: highest risk score 436
 - Maize: 72% of all critical spike events
 - 2025 shows worst crisis period in analysis window
+
+
+
+
+
+## [Phase 3] — 2026-05-08
+### Added
+- Spatial indexes on all three PostGIS tables (GIST + btree)
+- sql/02_spatial_queries.sql — four spatial queries
+- sql/03_monitoring_gaps.sql — monitoring gap classifier
+- ST_Within point-in-polygon join
+- ST_Distance + ST_Transform buffer query (100km Blantyre)
+- Multi-condition spatial query combining risk + severity + distance
+- Monitoring gap CASE classification with calibrated thresholds
+
+### Key Findings
+- 4 districts with CRITICAL monitoring gap: Mulanje, Machinga, Zomba, Chikwawa
+- Thondwe market (Zomba) 37km from Blantyre — 10 critical spikes 2025
+- 39% of all markets within 100km of Blantyre
+- Karonga: HIGH GAP — 2 markets for risk score 104
+
+### Lessons
+- PostgreSQL ROUND() requires ::numeric cast for ST_Distance results
+- Use CREATE INDEX IF NOT EXISTS for idempotent scripts
+- CASE thresholds need domain calibration — purely numeric logic
+  can label the highest risk district as ADEQUATE
 EOF
