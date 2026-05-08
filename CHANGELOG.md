@@ -40,8 +40,6 @@
 
 
 
-
-
 ## [Phase 3] — 2026-05-08
 ### Added
 - Spatial indexes on all three PostGIS tables (GIST + btree)
@@ -63,4 +61,39 @@
 - Use CREATE INDEX IF NOT EXISTS for idempotent scripts
 - CASE thresholds need domain calibration — purely numeric logic
   can label the highest risk district as ADEQUATE
+
+
+cat >> ~/malawi_food_security/CHANGELOG.md << 'EOF'
+
+## [Phase 4] — 2026-05-07
+### Added
+- FastAPI application with 7 endpoints
+- asyncpg connection pool — async PostgreSQL driver
+- api/main.py — app entry point with CORS middleware
+- api/database.py — connection pool management
+- api/routers/districts.py — district GeoJSON endpoints
+- api/routers/markets.py — market GeoJSON endpoint
+- api/routers/spikes.py — spike events with query filters
+- api/routers/summary.py — national statistics endpoint
+- Swagger UI at /docs — auto-generated API documentation
+- docs/04_api.md
+
+### Configuration
+- PostgreSQL TCP authentication changed to md5
+- asyncpg installed for async database access
+- CORS enabled for Leaflet frontend access
+
+### Endpoints Working
+- GET /                          → health check
+- GET /api/summary               → national stats
+- GET /api/districts             → all 28 districts GeoJSON
+- GET /api/districts/{name}      → district detail + markets + spikes
+- GET /api/markets               → all 113 markets GeoJSON
+- GET /api/spikes                → 2595 spike events (filterable)
+- GET /api/spikes/critical       → 215 critical events
+- GET /docs                      → Swagger UI
+
+### Key Concept Learned
+Browser → Uvicorn → FastAPI → asyncpg pool → PostgreSQL:5432
+→ PostGIS spatial query → GeoJSON → HTTP response → Leaflet map
 EOF

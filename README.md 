@@ -1,7 +1,11 @@
 # Malawi Food Security GIS Monitor
 
 A data-driven GIS system for tracking food price spikes across
-Malawi's 28 districts and 130 markets — built on WFP VAM data.
+Malawi's 28 districts and 130 markets.his project builds on the WFP VAM 
+methodology used in HungerMapLive (global, proprietary) and extends
+country-level analysis approaches from open source WFP price analyis tools.
+No comparible open source system exists for Malawi as district and market level
+resolution.
 
 ## Purpose
 Detect food price shocks early, rank districts by food security
@@ -40,4 +44,12 @@ Analysis window: Jan 2020 – Apr 2026
 
 ## Project Structure
 See /docs/ for detailed documentation of each phase.
+
+
+"""wfp OPERATES HungerMapLive globally built
+country offices and local NGOs do not have 
+access to district and market-leveltools built 
+on the same methodology. This system fills that 
+gap for MALAWI SPECIFICALLY."""
+
 EOF

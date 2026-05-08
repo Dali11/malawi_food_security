@@ -14,7 +14,7 @@ DB_CONFIG = {
     "port"    : int(os.getenv("DB_PORT", "5432")),
     "database": os.getenv("DB_NAME",     "malawi_food_security"),
     "user"    : os.getenv("DB_USER",     "postgres"),
-    "password": os.getenv("DB_PASSWORD", ""),
+    "password": os.getenv("DB_PASSWORD", "dali@i9i"),
 }
 
 # Global connection pool
@@ -24,7 +24,7 @@ async def connect():
     """Create connection pool on startup."""
     global pool
     pool = await asyncpg.create_pool(**DB_CONFIG)
-    print(f"Database connected: {DB_CONFIG['database']}")
+    print(f"✅ Database connected: {DB_CONFIG['database']}")
 
 async def disconnect():
     """Close connection pool on shutdown."""

@@ -39,7 +39,3 @@ GROUP BY d.name_1, d.region, d.risk_score
 HAVING COUNT(s.ogc_fid) > 0
 ORDER BY critical_count DESC;
 EOF
-
-git add sql/
-git commit -m "sql: add database creation and spatial query files"
-git push origin master
