@@ -14,7 +14,6 @@ router = APIRouter(prefix="/api/districts", tags=["Districts"])
 async def get_all_districts():
     """
     Return all 28 districts as GeoJSON FeatureCollection.
-    Includes risk score, spike counts, and district polygon geometry.
     Used by Leaflet to render the choropleth layer.
     """
     pool = await get_pool()
@@ -22,19 +21,18 @@ async def get_all_districts():
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT
-                name_1                          AS district,
+                name_1                              AS district,
                 region,
-                ROUND(risk_score::numeric, 0)   AS risk_score,
+                ROUND(risk_score::numeric, 0)       AS risk_score,
                 critical_count,
                 severe_count,
                 moderate_count,
-                ROUND(spike_rate_pct::numeric, 2) AS spike_rate_pct,
-                ST_AsGeoJSON(wkb_geometry)      AS geometry
+                ROUND(spike_rate_pct::numeric, 2)   AS spike_rate_pct,
+                ST_AsGeoJSON(wkb_geometry)          AS geometry
             FROM districts_risk
             ORDER BY risk_score DESC
         """)
 
-    # Build GeoJSON FeatureCollection
     features = []
     for row in rows:
         features.append({
@@ -58,16 +56,52 @@ async def get_all_districts():
     }
 
 
+@router.get("/{district_name}/prices")
+async def get_district_prices(
+    district_name: str,
+    commodity    : str = "Maize"
+):
+    """
+    Return monthly price time series for a district and commodity.
+    Used by the Recharts price trend chart in the district popup.
+    Queries the full prices table loaded from food_prices_analysed.csv.
+    """
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT
+                TO_CHAR(
+                    DATE_TRUNC('month', TO_DATE(date, 'YYYY-MM-DD')),
+                    'YYYY-MM-DD'
+                )                                       AS month,
+                ROUND(AVG(price::numeric), 0)           AS avg_price,
+                SUM(CASE WHEN is_spike = 'true'
+                    THEN 1 ELSE 0 END)                  AS spike_count
+            FROM prices
+            WHERE LOWER(district) = LOWER($1)
+              AND LOWER(commodity) LIKE LOWER($2)
+            GROUP BY DATE_TRUNC('month', TO_DATE(date, 'YYYY-MM-DD'))
+            ORDER BY month ASC
+        """, district_name, f"%{commodity}%")
+
+    return {
+        "district" : district_name,
+        "commodity": commodity,
+        "count"    : len(rows),
+        "prices"   : [dict(r) for r in rows]
+    }
+
+
 @router.get("/{district_name}")
 async def get_district(district_name: str):
     """
-    Return one district's full detail.
+    Return one district full detail.
     Used by the popup panel when user clicks a district on the map.
     """
     pool = await get_pool()
 
     async with pool.acquire() as conn:
-        # District stats
         row = await conn.fetchrow("""
             SELECT
                 name_1                              AS district,
@@ -89,9 +123,9 @@ async def get_district(district_name: str):
                 detail=f"District '{district_name}' not found"
             )
 
-        # Markets in this district
         markets = await conn.fetch("""
-            SELECT m.market, m.total_spikes, m.spike_rate_pct
+            SELECT m.market, m.total_spikes,
+                   ROUND(m.spike_rate_pct::numeric, 2) AS spike_rate_pct
             FROM markets m
             JOIN districts_risk d
                 ON ST_Within(m.wkb_geometry, d.wkb_geometry)
@@ -99,14 +133,13 @@ async def get_district(district_name: str):
             ORDER BY m.total_spikes DESC
         """, district_name)
 
-        # Recent critical spikes in this district
         spikes = await conn.fetch("""
             SELECT
                 s.commodity,
                 s.market,
                 ROUND(s.pct_change::numeric, 1) AS pct_change,
                 s.spike_severity,
-                s.date::text AS date
+                s.date::text                    AS date
             FROM spikes s
             JOIN districts_risk d
                 ON ST_Within(s.wkb_geometry, d.wkb_geometry)
@@ -117,15 +150,15 @@ async def get_district(district_name: str):
         """, district_name)
 
     return {
-        "district"      : row["district"],
-        "region"        : row["region"],
-        "risk_score"    : float(row["risk_score"]),
-        "critical_count": row["critical_count"],
-        "severe_count"  : row["severe_count"],
-        "moderate_count": row["moderate_count"],
-        "avg_price_mwk" : float(row["avg_price"]),
-        "spike_rate_pct": float(row["spike_rate_pct"]),
-        "geometry"      : json.loads(row["geometry"]),
-        "markets"       : [dict(m) for m in markets],
+        "district"              : row["district"],
+        "region"                : row["region"],
+        "risk_score"            : float(row["risk_score"]),
+        "critical_count"        : row["critical_count"],
+        "severe_count"          : row["severe_count"],
+        "moderate_count"        : row["moderate_count"],
+        "avg_price_mwk"         : float(row["avg_price"]),
+        "spike_rate_pct"        : float(row["spike_rate_pct"]),
+        "geometry"              : json.loads(row["geometry"]),
+        "markets"               : [dict(m) for m in markets],
         "recent_critical_spikes": [dict(s) for s in spikes]
     }

@@ -97,3 +97,34 @@ cat >> ~/malawi_food_security/CHANGELOG.md << 'EOF'
 Browser → Uvicorn → FastAPI → asyncpg pool → PostgreSQL:5432
 → PostGIS spatial query → GeoJSON → HTTP response → Leaflet map
 EOF
+## [Phase 5] — 2026-05-08
+### Added
+- Next.js 14 App Router frontend
+- React-Leaflet interactive map with three layers
+- District choropleth coloured by composite risk score
+- Spike markers filtered by severity level
+- Market point layer with popup details
+- Basemap switcher: Dark / OpenStreetMap / Satellite
+- Severity filter toolbar: All / Critical / Severe / Moderate
+- District click popup with full risk analysis
+- Price trend chart (Recharts) with commodity selector tabs
+- Critical alerts panel — live from /api/spikes/critical
+- Stats panel — live from /api/summary via useSummary hook
+- Custom hook pattern: lib/hooks/useSummary.ts
+- TypeScript interfaces for all API responses
+- Client Island pattern: DashboardClient owns shared map state
+- New FastAPI endpoint: GET /api/districts/{name}/prices
+- prices table loaded into PostGIS from food_prices_analysed.csv
+- docs/05_frontend.md
+
+### Architecture
+- page.tsx kept as Server Component
+- DashboardClient as Client Island for map + popup state
+- Dynamic import with ssr:false for Leaflet
+- Tailwind v4 with @import syntax
+
+### Fixed
+- FastAPI route order: /prices before /{district_name}
+- Leaflet icon broken in webpack — manual mergeOptions fix
+- Tailwind v4 globals.css @import instead of @tailwind directives
+- Linux case-sensitive folder names for component imports
