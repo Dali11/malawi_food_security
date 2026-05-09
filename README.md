@@ -26,6 +26,7 @@ an interactive web map dashboard.
 
 ## System Architecture
 WFP CSV → Python/Pandas → PostGIS → FastAPI → Next.js
+
 ## Tech Stack
 - Data Analysis : Python, pandas, numpy, geopandas
 - Spatial DB    : PostgreSQL + PostGIS (Supabase)
