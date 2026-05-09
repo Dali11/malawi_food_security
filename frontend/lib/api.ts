@@ -1,53 +1,51 @@
 /**
  * api.ts
- * All FastAPI fetch functions.
- * Single source of truth for API communication.
+ * All FastAPI fetch functions with retry logic.
  */
 
 import type {
-  PriceTrend,
   DistrictCollection,
   DistrictDetail,
   MarketCollection,
   SpikeCollection,
   Summary,
+  PriceTrend,
 } from "./types"
 
-// ── Base URL ───────────────────────────────────────────────────────────────
-// In production change this to your deployed API URL
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-// ── Generic fetch with error handling ─────────────────────────────────────
-async function apiFetch<T>(endpoint: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    next: { revalidate: 3600 },   // cache for 1 hour — data updates monthly
-  })
-
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${endpoint}`)
+// ── Fetch with retry ───────────────────────────────────────────────────────
+async function apiFetch<T>(endpoint: string, retries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        cache: "no-store",    // always fresh in production
+      })
+      if (!res.ok) throw new Error(`API ${res.status}: ${endpoint}`)
+      return res.json() as Promise<T>
+    } catch (err) {
+      if (attempt === retries) throw err
+      // Wait before retry: 500ms, 1000ms, 1500ms
+      await new Promise(r => setTimeout(r, attempt * 500))
+    }
   }
-
-  return res.json() as Promise<T>
+  throw new Error(`Failed after ${retries} attempts: ${endpoint}`)
 }
 
 // ── Endpoints ──────────────────────────────────────────────────────────────
 
-/** All 28 districts as GeoJSON — used for choropleth layer */
 export async function getDistricts(): Promise<DistrictCollection> {
   return apiFetch<DistrictCollection>("/api/districts/")
 }
 
-/** One district full detail — used for district popup panel */
 export async function getDistrict(name: string): Promise<DistrictDetail> {
   return apiFetch<DistrictDetail>(`/api/districts/${encodeURIComponent(name)}`)
 }
 
-/** All 113 markets as GeoJSON — used for market dot layer */
 export async function getMarkets(): Promise<MarketCollection> {
   return apiFetch<MarketCollection>("/api/markets/")
 }
 
-/** Spike events with optional filters */
 export async function getSpikes(params?: {
   severity? : string
   district? : string
@@ -59,33 +57,38 @@ export async function getSpikes(params?: {
   if (params?.district)  query.set("district",  params.district)
   if (params?.commodity) query.set("commodity", params.commodity)
   if (params?.limit)     query.set("limit",     String(params.limit))
-
   const qs = query.toString()
   return apiFetch<SpikeCollection>(`/api/spikes/${qs ? `?${qs}` : ""}`)
 }
 
-/** Critical spikes only — used for alert panel */
 export async function getCriticalSpikes(): Promise<SpikeCollection> {
   return apiFetch<SpikeCollection>("/api/spikes/critical")
 }
 
-/** National summary statistics — used for header stats */
 export async function getSummary(): Promise<Summary> {
   return apiFetch<Summary>("/api/summary/")
 }
 
-// ── Risk score → colour mapping ────────────────────────────────────────────
-// Used by the choropleth layer to colour districts
-export function getRiskColor(score: number): string {
-  if (score === 0)   return "#E8F5E9"   // no data — light green
-  if (score <= 59)   return "#A5D6A7"   // stable — green
-  if (score <= 126)  return "#FFE082"   // low — yellow
-  if (score <= 199)  return "#FFAB40"   // moderate — amber
-  if (score <= 277)  return "#EF5350"   // high — red
-  return                    "#B71C1C"   // critical — dark red
+export async function getDistrictPrices(
+  district : string,
+  commodity: string = "Maize"
+): Promise<PriceTrend> {
+  return apiFetch<PriceTrend>(
+    `/api/districts/${encodeURIComponent(district)}/prices?commodity=${encodeURIComponent(commodity)}`
+  )
 }
 
-// ── Severity → colour mapping ──────────────────────────────────────────────
+// ── Color helpers ──────────────────────────────────────────────────────────
+
+export function getRiskColor(score: number): string {
+  if (score === 0)   return "#E8F5E9"
+  if (score <= 59)   return "#A5D6A7"
+  if (score <= 126)  return "#FFE082"
+  if (score <= 199)  return "#FFAB40"
+  if (score <= 277)  return "#EF5350"
+  return                    "#B71C1C"
+}
+
 export function getSeverityColor(severity: string): string {
   switch (severity) {
     case "Critical": return "#B71C1C"
@@ -95,7 +98,6 @@ export function getSeverityColor(severity: string): string {
   }
 }
 
-// ── Risk score → label ─────────────────────────────────────────────────────
 export function getRiskLabel(score: number): string {
   if (score === 0)   return "No Data"
   if (score <= 59)   return "Stable"
@@ -103,13 +105,4 @@ export function getRiskLabel(score: number): string {
   if (score <= 199)  return "Moderate"
   if (score <= 277)  return "High"
   return                    "Critical"
-}
-/** Price time series for one district and commodity */
-export async function getDistrictPrices(
-  district : string,
-  commodity: string = "Maize"
-): Promise<PriceTrend> {
-  return apiFetch<PriceTrend>(
-    `/api/districts/${encodeURIComponent(district)}/prices?commodity=${encodeURIComponent(commodity)}`
-  )
 }

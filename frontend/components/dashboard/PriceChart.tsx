@@ -99,8 +99,7 @@ export default function PriceChart({
               fontSize       : "11px",
               color          : "#e2e8f0"
             }}
-            formatter={(val: number) => [`${val.toLocaleString()} MWK`, commodity]}
-            labelFormatter={formatMonth}
+            formatter={(val) => [`${(val as number)?.toLocaleString() ?? "0"} MWK`, commodity]}
           />
           <Line
             type="monotone"

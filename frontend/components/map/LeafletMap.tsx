@@ -55,7 +55,6 @@ export default function LeafletMap({
   const [spikes,    setSpikes   ] = useState<SpikeCollection    | null>(null)
   const [loading,   setLoading  ] = useState(true)
 
-  // Load districts and markets once
   useEffect(() => {
     async function loadBase() {
       try {
@@ -71,24 +70,31 @@ export default function LeafletMap({
     loadBase()
   }, [])
 
-  // Reload spikes when severity filter changes
   useEffect(() => {
-    const params = severityFilter === "All"
-      ? {}
-      : { severity: severityFilter }
-
-    getSpikes(params)
-      .then(setSpikes)
-      .catch(console.error)
+    const params = severityFilter === "All" ? {} : { severity: severityFilter }
+    getSpikes(params).then(setSpikes).catch(console.error)
   }, [severityFilter])
 
+  // ── District style — reduced opacity so points are visible ──────────────
   function districtStyle(feature?: Feature) {
     const score = feature?.properties?.risk_score ?? 0
     return {
       fillColor  : getRiskColor(score),
-      fillOpacity: 0.75,
+      fillOpacity: 0.45,          // reduced from 0.75
       color      : "#ffffff",
-      weight     : 1.5,
+      weight     : 1.2,
+      opacity    : 0.8,
+    }
+  }
+
+  function districtHoverStyle(feature?: Feature) {
+    const score = feature?.properties?.risk_score ?? 0
+    return {
+      fillColor  : getRiskColor(score),
+      fillOpacity: 0.65,
+      color      : "#ffffff",
+      weight     : 2.5,
+      opacity    : 1,
     }
   }
 
@@ -97,8 +103,8 @@ export default function LeafletMap({
     layer.on({
       mouseover: (e) => {
         const l = e.target as L.Path
-        l.setStyle({ weight: 3, color: "#ffffff", fillOpacity: 0.95 })
-        l.bringToFront()
+        l.setStyle(districtHoverStyle(feature))
+        // Do NOT bringToFront — this hides the point markers
       },
       mouseout: (e) => {
         const l = e.target as L.Path
@@ -136,7 +142,7 @@ export default function LeafletMap({
       className="w-full h-full"
       zoomControl={true}
     >
-      {/* Basemap — key forces remount when URL changes */}
+      {/* Basemap */}
       <TileLayer
         key={basemap.url}
         url={basemap.url}
@@ -145,7 +151,7 @@ export default function LeafletMap({
 
       <FitMalawi />
 
-      {/* District choropleth */}
+      {/* Layer 1 — District choropleth (bottom) */}
       {districts && (
         <GeoJSON
           key="districts"
@@ -155,7 +161,8 @@ export default function LeafletMap({
         />
       )}
 
-      {/* Market points */}
+      {/* Layer 2 — Market points (middle) 
+          pane="markerPane" ensures they render above polygons */}
       {markets?.features.map((f, i) => {
         const [lng, lat] = f.geometry.coordinates
         const p = f.properties
@@ -163,26 +170,31 @@ export default function LeafletMap({
           <CircleMarker
             key={`market-${i}`}
             center={[lat, lng]}
-            radius={5}
+            radius={6}
+            pane="markerPane"
             pathOptions={{
-              color: "#ffffff", weight: 1,
-              fillColor: "#1565C0", fillOpacity: 0.9,
+              color      : "#ffffff",
+              weight     : 1.5,
+              fillColor  : "#1565C0",
+              fillOpacity: 1,
             }}
           >
             <Popup>
               <div className="text-xs space-y-1">
                 <div className="font-bold text-sm">{p.market}</div>
                 <div>District: {p.district}</div>
-                <div>Commodities: {p.num_commodities}</div>
+                <div>Commodities tracked: {p.num_commodities}</div>
                 <div>Total spikes: {p.total_spikes}</div>
                 <div>Spike rate: {p.spike_rate_pct}%</div>
+                <div>Critical events: {p.critical_count}</div>
               </div>
             </Popup>
           </CircleMarker>
         )
       })}
 
-      {/* Spike markers — filtered by severityFilter */}
+      {/* Layer 3 — Spike markers (top)
+          pane="tooltipPane" ensures they render above everything */}
       {spikes?.features.map((f, i) => {
         const [lng, lat] = f.geometry.coordinates
         const p = f.properties
@@ -191,10 +203,13 @@ export default function LeafletMap({
           <CircleMarker
             key={`spike-${i}`}
             center={[lat, lng]}
-            radius={7}
+            radius={8}
+            pane="tooltipPane"
             pathOptions={{
-              color: "#ffffff", weight: 1.5,
-              fillColor: color, fillOpacity: 0.9,
+              color      : "#ffffff",
+              weight     : 1.5,
+              fillColor  : color,
+              fillOpacity: 1,
             }}
           >
             <Popup>
@@ -203,9 +218,11 @@ export default function LeafletMap({
                   ⚠ {p.spike_severity} Spike
                 </div>
                 <div>Market: <b>{p.market}</b></div>
+                <div>District: {p.district}</div>
                 <div>Commodity: <b>{p.commodity}</b></div>
                 <div>Price: {p.price_mwk.toLocaleString()} MWK</div>
                 <div>Jump: <b style={{ color }}>+{p.pct_change}%</b></div>
+                <div>Z-score: {p.zscore}</div>
                 <div>Date: {p.date}</div>
               </div>
             </Popup>
