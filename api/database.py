@@ -1,38 +1,35 @@
 """
 database.py
 Async PostgreSQL connection pool using asyncpg.
-All API routes share one pool — efficient and production-safe.
+Reads all config from environment variables for production safety.
 """
 
 import asyncpg
 import os
 
-# Connection settings
-# In production these come from environment variables
 DB_CONFIG = {
     "host"    : os.getenv("DB_HOST",     "localhost"),
     "port"    : int(os.getenv("DB_PORT", "5432")),
     "database": os.getenv("DB_NAME",     "malawi_food_security"),
     "user"    : os.getenv("DB_USER",     "postgres"),
-    "password": os.getenv("DB_PASSWORD", "dali@i9i"),
+    "password": os.getenv("DB_PASSWORD", "malawi123"),
+    "ssl"     : os.getenv("DB_SSL",      "require") if os.getenv("DB_HOST", "localhost") != "localhost" else None,
 }
 
-# Global connection pool
 pool = None
 
 async def connect():
-    """Create connection pool on startup."""
     global pool
-    pool = await asyncpg.create_pool(**DB_CONFIG)
-    print(f"✅ Database connected: {DB_CONFIG['database']}")
+    # Remove ssl key if None to avoid asyncpg error on local
+    config = {k: v for k, v in DB_CONFIG.items() if v is not None}
+    pool = await asyncpg.create_pool(**config)
+    print(f"✅ Database connected: {DB_CONFIG['database']} @ {DB_CONFIG['host']}")
 
 async def disconnect():
-    """Close connection pool on shutdown."""
     global pool
     if pool:
         await pool.close()
         print("Database pool closed")
 
 async def get_pool():
-    """Return the active connection pool."""
     return pool
