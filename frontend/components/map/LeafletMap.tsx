@@ -5,10 +5,10 @@ import {
   MapContainer, TileLayer, GeoJSON,
   CircleMarker, Popup, useMap
 } from "react-leaflet"
+import MarkerClusterGroup from "react-leaflet-cluster"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
-import type { Feature } from "geojson"
-import type { GeoJsonObject } from "geojson"
+import type { Feature, GeoJsonObject } from "geojson"
 import type {
   DistrictCollection, MarketCollection,
   SpikeCollection, DistrictDetail
@@ -27,14 +27,14 @@ L.Icon.Default.mergeOptions({
 })
 
 const MALAWI_BOUNDS: L.LatLngBoundsExpression = [
-  [-17.13, 32.67],
-  [-9.36,  35.92],
+  [-17.13, 33.8],
+  [-9.36,  35.5],
 ]
 
 function FitMalawi() {
   const map = useMap()
   useEffect(() => {
-    map.fitBounds(MALAWI_BOUNDS, { padding: [20, 20] })
+    map.fitBounds(MALAWI_BOUNDS, { padding: [10, 10] })
   }, [map])
   return null
 }
@@ -75,26 +75,14 @@ export default function LeafletMap({
     getSpikes(params).then(setSpikes).catch(console.error)
   }, [severityFilter])
 
-  // ── District style — reduced opacity so points are visible ──────────────
   function districtStyle(feature?: Feature) {
     const score = feature?.properties?.risk_score ?? 0
     return {
       fillColor  : getRiskColor(score),
-      fillOpacity: 0.45,          // reduced from 0.75
+      fillOpacity: 0.45,
       color      : "#ffffff",
       weight     : 1.2,
       opacity    : 0.8,
-    }
-  }
-
-  function districtHoverStyle(feature?: Feature) {
-    const score = feature?.properties?.risk_score ?? 0
-    return {
-      fillColor  : getRiskColor(score),
-      fillOpacity: 0.65,
-      color      : "#ffffff",
-      weight     : 2.5,
-      opacity    : 1,
     }
   }
 
@@ -103,8 +91,11 @@ export default function LeafletMap({
     layer.on({
       mouseover: (e) => {
         const l = e.target as L.Path
-        l.setStyle(districtHoverStyle(feature))
-        // Do NOT bringToFront — this hides the point markers
+        l.setStyle({
+          fillColor  : getRiskColor(p.risk_score),
+          fillOpacity: 0.65,
+          weight     : 2.5,
+        })
       },
       mouseout: (e) => {
         const l = e.target as L.Path
@@ -138,11 +129,10 @@ export default function LeafletMap({
   return (
     <MapContainer
       bounds={MALAWI_BOUNDS}
-      boundsOptions={{ padding: [20, 20] }}
+      boundsOptions={{ padding: [10, 10] }}
       className="w-full h-full"
       zoomControl={true}
     >
-      {/* Basemap */}
       <TileLayer
         key={basemap.url}
         url={basemap.url}
@@ -151,7 +141,7 @@ export default function LeafletMap({
 
       <FitMalawi />
 
-      {/* Layer 1 — District choropleth (bottom) */}
+      {/* District choropleth — bottom layer */}
       {districts && (
         <GeoJSON
           key="districts"
@@ -161,74 +151,82 @@ export default function LeafletMap({
         />
       )}
 
-      {/* Layer 2 — Market points (middle) 
-          pane="markerPane" ensures they render above polygons */}
-      {markets?.features.map((f, i) => {
-        const [lng, lat] = f.geometry.coordinates
-        const p = f.properties
-        return (
-          <CircleMarker
-            key={`market-${i}`}
-            center={[lat, lng]}
-            radius={6}
-            pane="markerPane"
-            pathOptions={{
-              color      : "#ffffff",
-              weight     : 1.5,
-              fillColor  : "#1565C0",
-              fillOpacity: 1,
-            }}
-          >
-            <Popup>
-              <div className="text-xs space-y-1">
-                <div className="font-bold text-sm">{p.market}</div>
-                <div>District: {p.district}</div>
-                <div>Commodities tracked: {p.num_commodities}</div>
-                <div>Total spikes: {p.total_spikes}</div>
-                <div>Spike rate: {p.spike_rate_pct}%</div>
-                <div>Critical events: {p.critical_count}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        )
-      })}
-
-      {/* Layer 3 — Spike markers (top)
-          pane="tooltipPane" ensures they render above everything */}
-      {spikes?.features.map((f, i) => {
-        const [lng, lat] = f.geometry.coordinates
-        const p = f.properties
-        const color = getSeverityColor(p.spike_severity)
-        return (
-          <CircleMarker
-            key={`spike-${i}`}
-            center={[lat, lng]}
-            radius={8}
-            pane="tooltipPane"
-            pathOptions={{
-              color      : "#ffffff",
-              weight     : 1.5,
-              fillColor  : color,
-              fillOpacity: 1,
-            }}
-          >
-            <Popup>
-              <div className="text-xs space-y-1">
-                <div className="font-bold text-sm" style={{ color }}>
-                  ⚠ {p.spike_severity} Spike
+      {/* Market points — clustered */}
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={30}
+      >
+        {markets?.features.map((f, i) => {
+          const [lng, lat] = f.geometry.coordinates
+          const p = f.properties
+          return (
+            <CircleMarker
+              key={`market-${i}`}
+              center={[lat, lng]}
+              radius={6}
+              pane="markerPane"
+              pathOptions={{
+                color      : "#ffffff",
+                weight     : 1.5,
+                fillColor  : "#1565C0",
+                fillOpacity: 1,
+              }}
+            >
+              <Popup>
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-sm">{p.market}</div>
+                  <div>District: {p.district}</div>
+                  <div>Commodities: {p.num_commodities}</div>
+                  <div>Total spikes: {p.total_spikes}</div>
+                  <div>Spike rate: {p.spike_rate_pct}%</div>
+                  <div>Critical events: {p.critical_count}</div>
                 </div>
-                <div>Market: <b>{p.market}</b></div>
-                <div>District: {p.district}</div>
-                <div>Commodity: <b>{p.commodity}</b></div>
-                <div>Price: {p.price_mwk.toLocaleString()} MWK</div>
-                <div>Jump: <b style={{ color }}>+{p.pct_change}%</b></div>
-                <div>Z-score: {p.zscore}</div>
-                <div>Date: {p.date}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        )
-      })}
+              </Popup>
+            </CircleMarker>
+          )
+        })}
+      </MarkerClusterGroup>
+
+      {/* Spike markers — clustered, above everything */}
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={25}
+      >
+        {spikes?.features.map((f, i) => {
+          const [lng, lat] = f.geometry.coordinates
+          const p = f.properties
+          const color = getSeverityColor(p.spike_severity)
+          return (
+            <CircleMarker
+              key={`spike-${i}`}
+              center={[lat, lng]}
+              radius={8}
+              pane="tooltipPane"
+              pathOptions={{
+                color      : "#ffffff",
+                weight     : 1.5,
+                fillColor  : color,
+                fillOpacity: 1,
+              }}
+            >
+              <Popup>
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-sm" style={{ color }}>
+                    ⚠ {p.spike_severity} Spike
+                  </div>
+                  <div>Market: <b>{p.market}</b></div>
+                  <div>District: {p.district}</div>
+                  <div>Commodity: <b>{p.commodity}</b></div>
+                  <div>Price: {p.price_mwk.toLocaleString()} MWK</div>
+                  <div>Jump: <b style={{ color }}>+{p.pct_change}%</b></div>
+                  <div>Z-score: {p.zscore}</div>
+                  <div>Date: {p.date}</div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          )
+        })}
+      </MarkerClusterGroup>
 
     </MapContainer>
   )
