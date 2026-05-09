@@ -24,3 +24,17 @@
 .leaflet-popup-tip {
   background: #1e293b;
 }
+/* Fix Chromium square focus box on Leaflet polygon click */
+.leaflet-interactive:focus {
+  outline: none !important;
+}
+
+.leaflet-interactive {
+  outline: none !important;
+}
+
+/* Ensure SVG paths have no focus ring in all browsers */
+path.leaflet-interactive:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
