@@ -7,7 +7,7 @@ Malawi's 28 districts and 130 markets — built on WFP VAM data.
 
 | Service   | URL                                                      |
 |-----------|----------------------------------------------------------|
-| Dashboard | https://malawi-food-security.vercel.app                  |
+| Dashboard | https://frontend-seven-omega-94.vercel.app               |
 | API       | https://web-production-86b19.up.railway.app              |
 | API Docs  | https://web-production-86b19.up.railway.app/docs         |
 | GitHub    | https://github.com/Dali11/malawi_food_security           |
