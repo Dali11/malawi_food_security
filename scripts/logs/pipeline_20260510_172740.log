@@ -1,0 +1,18 @@
+2026-05-10 17:27:40,435 | INFO | ============================================================
+2026-05-10 17:27:40,435 | INFO | MALAWI FOOD SECURITY — DATA UPDATE PIPELINE
+2026-05-10 17:27:40,435 | INFO | Run started: 2026-05-10 17:27:40
+2026-05-10 17:27:40,435 | INFO | ============================================================
+2026-05-10 17:27:40,435 | INFO | Connecting to database...
+2026-05-10 17:27:40,460 | INFO | Connected successfully
+2026-05-10 17:27:40,461 | INFO | Downloading latest WFP data from HDX...
+2026-05-10 17:28:17,243 | INFO | Downloaded 57,341 total records
+2026-05-10 17:28:17,245 | INFO | Fetching existing dates from database...
+2026-05-10 17:28:17,262 | INFO | Found 331 existing date records in database
+2026-05-10 17:28:17,262 | INFO | Cleaning and filtering new data...
+2026-05-10 17:28:17,352 | INFO | Standardised records in download : 37,127
+2026-05-10 17:28:17,352 | INFO | New standardised records         : 0
+2026-05-10 17:28:17,352 | INFO | Informal records (not loaded)    : 8,056
+2026-05-10 17:28:17,352 | INFO | No new data found — database is up to date
+2026-05-10 17:28:17,355 | INFO | Pipeline complete — no new data to process
+2026-05-10 17:28:17,375 | INFO | Pipeline run logged to database
+2026-05-10 17:28:17,375 | INFO | Database connection closed

@@ -1,0 +1,60 @@
+2026-05-10 14:14:41,632 | INFO | ============================================================
+2026-05-10 14:14:41,633 | INFO | MALAWI FOOD SECURITY — DATA UPDATE PIPELINE
+2026-05-10 14:14:41,633 | INFO | Run started: 2026-05-10 14:14:41
+2026-05-10 14:14:41,633 | INFO | ============================================================
+2026-05-10 14:14:41,633 | INFO | Connecting to database...
+2026-05-10 14:14:41,667 | INFO | Connected successfully
+2026-05-10 14:14:41,667 | INFO | Downloading latest WFP data from HDX...
+2026-05-10 14:16:01,417 | INFO | Downloaded 79,285 total records
+2026-05-10 14:16:01,420 | INFO | Fetching existing dates from database...
+2026-05-10 14:16:01,516 | INFO | Found 71 existing date records in database
+2026-05-10 14:16:01,517 | INFO | Cleaning and filtering new data...
+2026-05-10 14:16:01,652 | INFO | Standardised records in download : 51,068
+2026-05-10 14:16:01,652 | INFO | New standardised records         : 22,784
+2026-05-10 14:16:01,652 | INFO | Informal records (not loaded)    : 11,227
+2026-05-10 14:16:01,679 | INFO | Loading historical data for spike detection context...
+2026-05-10 14:16:03,049 | INFO | Loaded 28,283 historical records
+2026-05-10 14:16:03,049 | INFO | Running spike detection on new data...
+2026-05-10 14:16:03,383 | ERROR | Pipeline failed: unsupported operand type(s) for /: 'str' and 'float'
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/pandas/core/ops/array_ops.py", line 218, in _na_arithmetic_op
+    result = func(left, right)
+  File "/usr/lib/python3/dist-packages/pandas/core/computation/expressions.py", line 242, in evaluate
+    return _evaluate(op, op_str, a, b)  # type: ignore[misc]
+  File "/usr/lib/python3/dist-packages/pandas/core/computation/expressions.py", line 131, in _evaluate_numexpr
+    result = _evaluate_standard(op, op_str, a, b)
+  File "/usr/lib/python3/dist-packages/pandas/core/computation/expressions.py", line 73, in _evaluate_standard
+    return op(a, b)
+TypeError: unsupported operand type(s) for /: 'str' and 'float'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/i9i/malawi_food_security/scripts/update_pipeline.py", line 417, in run_pipeline
+    df_processed = detect_spikes(df_new, df_history)
+  File "/home/i9i/malawi_food_security/scripts/update_pipeline.py", line 157, in detect_spikes
+    .pct_change() * 100
+     ~~~~~~~~~~^^
+  File "/usr/lib/python3/dist-packages/pandas/core/groupby/groupby.py", line 5466, in pct_change
+    return (filled / shifted) - 1
+            ~~~~~~~^~~~~~~~~
+  File "/usr/lib/python3/dist-packages/pandas/core/ops/common.py", line 76, in new_method
+    return method(self, other)
+  File "/usr/lib/python3/dist-packages/pandas/core/arraylike.py", line 210, in __truediv__
+    return self._arith_method(other, operator.truediv)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/pandas/core/series.py", line 6154, in _arith_method
+    return base.IndexOpsMixin._arith_method(self, other, op)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/pandas/core/base.py", line 1391, in _arith_method
+    result = ops.arithmetic_op(lvalues, rvalues, op)
+  File "/usr/lib/python3/dist-packages/pandas/core/ops/array_ops.py", line 283, in arithmetic_op
+    res_values = _na_arithmetic_op(left, right, op)  # type: ignore[arg-type]
+  File "/usr/lib/python3/dist-packages/pandas/core/ops/array_ops.py", line 227, in _na_arithmetic_op
+    result = _masked_arith_op(left, right, op)
+  File "/usr/lib/python3/dist-packages/pandas/core/ops/array_ops.py", line 163, in _masked_arith_op
+    result[mask] = op(xrav[mask], yrav[mask])
+                   ~~^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unsupported operand type(s) for /: 'str' and 'float'
+2026-05-10 14:16:04,294 | INFO | Pipeline run logged to database
+2026-05-10 14:16:04,295 | INFO | Database connection closed

@@ -1,0 +1,15 @@
+2026-05-10 19:01:31,866 | INFO | ============================================================
+2026-05-10 19:01:31,866 | INFO | MALAWI FOOD SECURITY — DATA UPDATE PIPELINE
+2026-05-10 19:01:31,866 | INFO | Run started: 2026-05-10 19:01:31
+2026-05-10 19:01:31,866 | INFO | ============================================================
+2026-05-10 19:01:31,867 | INFO | Connecting to database...
+2026-05-10 19:01:31,902 | ERROR | Pipeline failed: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+Traceback (most recent call last):
+  File "/home/i9i/malawi_food_security/scripts/update_pipeline.py", line 406, in run_pipeline
+    conn = psycopg2.connect(**DB_CONFIG)
+  File "/home/i9i/.local/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+

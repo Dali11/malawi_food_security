@@ -1,0 +1,41 @@
+2026-05-10 19:03:43,739 | INFO | ============================================================
+2026-05-10 19:03:43,739 | INFO | MALAWI FOOD SECURITY — DATA UPDATE PIPELINE
+2026-05-10 19:03:43,740 | INFO | Run started: 2026-05-10 19:03:43
+2026-05-10 19:03:43,740 | INFO | ============================================================
+2026-05-10 19:03:43,740 | INFO | Connecting to database...
+2026-05-10 19:03:43,768 | INFO | Connected successfully
+2026-05-10 19:03:43,768 | INFO | Downloading latest WFP data from HDX...
+2026-05-10 19:05:09,712 | INFO | Downloaded 57,341 total records
+2026-05-10 19:05:09,714 | INFO | Fetching existing dates from database...
+2026-05-10 19:05:09,735 | INFO | Found 71 existing date records in database
+2026-05-10 19:05:09,735 | INFO | Cleaning and filtering new data...
+2026-05-10 19:05:09,836 | INFO | Standardised records in download : 37,127
+2026-05-10 19:05:09,836 | INFO | New standardised records         : 16,828
+2026-05-10 19:05:09,836 | INFO | Informal records (not loaded)    : 8,056
+2026-05-10 19:05:09,858 | INFO | Loading historical data for spike detection context...
+2026-05-10 19:05:10,049 | INFO | Loaded 28,283 historical records
+2026-05-10 19:05:10,054 | INFO | Running spike detection on new data...
+2026-05-10 19:05:11,815 | INFO | New records processed    : 16,828
+2026-05-10 19:05:11,815 | INFO | New spike events         : 1,502
+2026-05-10 19:05:11,815 | INFO | New critical events      : 157
+2026-05-10 19:05:11,831 | INFO | Inserting 16,828 new records into database...
+2026-05-10 19:05:13,336 | INFO | Inserted 16,828 records successfully
+2026-05-10 19:05:13,352 | INFO | Adding 1,502 new spike events to spikes table...
+2026-05-10 19:05:13,404 | ERROR | Pipeline failed: syntax error at or near "text"
+LINE 13:             date text, region text, district text, market te...
+                          ^
+Traceback (most recent call last):
+  File "/home/i9i/malawi_food_security/scripts/update_pipeline.py", line 435, in run_pipeline
+    update_spikes_table(conn, df_processed)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/i9i/malawi_food_security/scripts/update_pipeline.py", line 351, in update_spikes_table
+    psycopg2.extras.execute_values(cur, insert_sql, records, page_size=500)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/i9i/.local/lib/python3.13/site-packages/psycopg2/extras.py", line 1299, in execute_values
+    cur.execute(b''.join(parts))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+psycopg2.errors.SyntaxError: syntax error at or near "text"
+LINE 13:             date text, region text, district text, market te...
+                          ^
+
+2026-05-10 19:05:13,407 | INFO | Database connection closed
