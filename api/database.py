@@ -12,7 +12,7 @@ DB_CONFIG = {
     "port"    : int(os.getenv("DB_PORT", "5432")),
     "database": os.getenv("DB_NAME",     "malawi_food_security"),
     "user"    : os.getenv("DB_USER",     "postgres"),
-    "password": os.getenv("DB_PASSWORD", "malawi123"),
+    "password": os.getenv("DB_PASSWORD", "dali@i9i"),
     "ssl"     : os.getenv("DB_SSL",      "require") if os.getenv("DB_HOST", "localhost") != "localhost" else None,
 }
 
