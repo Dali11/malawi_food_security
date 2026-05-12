@@ -128,3 +128,26 @@ EOF
 - Leaflet icon broken in webpack — manual mergeOptions fix
 - Tailwind v4 globals.css @import instead of @tailwind directives
 - Linux case-sensitive folder names for component imports
+
+## [Phase 9] — 2026-05-11
+### Added
+- scripts/update_pipeline.py — automatic WFP data update pipeline
+- Downloads from HDX: wfp_food_prices_mwi.csv weekly
+- Filters: 2020-present, food categories, KG/L units only
+- Detects new spike events using dual-method algorithm
+- Updates prices, spikes, districts_risk tables in Supabase
+- Logs every run to pipeline_log table
+- Deployed as Railway cron job — runs every Monday 6am UTC
+- scripts/logs/ — local pipeline run logs
+
+### Key decisions
+- 2020 filter hardcoded — WFP data goes to 1990 but analysis window is 2020-present
+- ON CONFLICT DO NOTHING — safe to run multiple times without duplicates
+- Row-by-row spike insert — handles type casting reliably
+- Supabase pooler URL (port 6543) — required for IPv4 connectivity
+
+### Pipeline flow
+  HDX download → 2020 filter → food category filter
+  → KG/L units only → find new dates → load history
+  → spike detection → insert prices → insert spikes
+  → rebuild district risk scores → log run
