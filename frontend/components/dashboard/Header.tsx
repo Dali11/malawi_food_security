@@ -18,7 +18,8 @@ export default function Header() {
   const downloadReport = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/reports/generate");
+      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API}/api/reports/generate`);
       if (!res.ok) throw new Error("Failed to generate report");
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
