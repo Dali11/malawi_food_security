@@ -28,7 +28,7 @@ export default function Header() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Report generation failed: " + err.message);
+      alert("Report generation failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setLoading(false);
     }
