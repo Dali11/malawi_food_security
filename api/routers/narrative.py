@@ -448,11 +448,9 @@ async def district_narrative(district_name: str):
 
         # Market count
         market_row = await conn.fetchrow("""
-            SELECT COUNT(m.ogc_fid) AS market_count
-            FROM districts_risk d
-            LEFT JOIN markets m ON ST_Within(m.wkb_geometry, d.wkb_geometry)
-            WHERE LOWER(d.name_1) = LOWER($1)
-            GROUP BY d.name_1
+            SELECT COUNT(*) AS market_count
+            FROM markets
+            WHERE LOWER(district) = LOWER($1)
         """, district_name)
 
         # Top commodities
