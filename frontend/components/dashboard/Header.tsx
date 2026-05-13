@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import ComparisonPanel from "./ComparisonPanel";
 
 export default function Header() {
   const [date, setDate] = useState("");
@@ -46,6 +47,8 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* comparison */}
+        {/* <ComparisonPanel /> */}
         {/* Export button */}
         <button
           onClick={downloadReport}
