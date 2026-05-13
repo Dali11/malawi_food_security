@@ -22,7 +22,7 @@ async def connect():
     global pool
     # Remove ssl key if None to avoid asyncpg error on local
     config = {k: v for k, v in DB_CONFIG.items() if v is not None}
-    pool = await asyncpg.create_pool(**config)
+    pool = await asyncpg.create_pool(**config, statement_cache_size=0)
     print(f"✅ Database connected: {DB_CONFIG['database']} @ {DB_CONFIG['host']}")
 
 async def disconnect():
