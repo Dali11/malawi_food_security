@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.database import connect, disconnect
 from api.routers import districts, markets, spikes, summary, reports
+from api.routers import districts, markets, spikes, summary, reports, compare
+from api.routers import districts, markets, spikes, summary, reports, compare, narrative
 
 # ── App setup ─────────────────────────────────────────────────
 app = FastAPI(
@@ -41,6 +43,8 @@ app.include_router(markets.router)
 app.include_router(spikes.router)
 app.include_router(summary.router)
 app.include_router(reports.router)
+app.include_router(compare.router)
+app.include_router(narrative.router)
 
 # ── Health check ──────────────────────────────────────────────
 @app.get("/", tags=["Health"])
