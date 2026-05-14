@@ -162,40 +162,33 @@ export default function NarrativePanel({ districtName }: { districtName: string 
 
             {/* Narrative sections */}
             <div className="px-3 py-2 space-y-3">
-              {SECTION_ORDER.map(key => {
-                const text = data.paragraphs?.[key as keyof NarrativeParagraphs]
-                if (!text) return null
-                const color = SECTION_COLORS[key] ?? "#64748B"
-                const label = SECTION_LABELS[key] ?? key
-
-                return (
-                  <div
-                    key={key}
-                    style={{
-                      borderLeft: `2px solid ${color}`,
-                      paddingLeft: 8,
-                    }}
-                  >
-                    <p style={{
-                      fontSize: 9,
-                      fontWeight: 500,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      color: "#64748B",
-                      marginBottom: 3,
-                    }}>
-                      {label}
-                    </p>
-                    <p style={{
-                      fontSize: 11,
-                      lineHeight: 1.6,
-                      color: "#CBD5E1",
-                    }}>
-                      {text}
-                    </p>
-                  </div>
-                )
-              })}
+              {data.source === "gemini" ? (
+                // Gemini: render as flowing paragraphs
+                (data.narrative || "").split("\n\n").filter(Boolean).map((para, i) => (
+                  <p key={i} style={{ fontSize: 11, lineHeight: 1.7, color: "#CBD5E1" }}>
+                    {para}
+                  </p>
+                ))
+              ) : (
+                // Template fallback: render labeled sections
+                SECTION_ORDER.map(key => {
+                  const text = data.paragraphs?.[key as keyof NarrativeParagraphs]
+                  if (!text) return null
+                  const color = SECTION_COLORS[key] ?? "#64748B"
+                  const label = SECTION_LABELS[key] ?? key
+                  return (
+                    <div key={key} style={{ borderLeft: `2px solid ${color}`, paddingLeft: 8 }}>
+                      <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase",
+                                  letterSpacing: "0.06em", color: "#64748B", marginBottom: 3 }}>
+                        {label}
+                      </p>
+                      <p style={{ fontSize: 11, lineHeight: 1.6, color: "#CBD5E1" }}>
+                        {text}
+                      </p>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </>
         )}
