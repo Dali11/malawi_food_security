@@ -72,45 +72,40 @@ def gemini_narrative(d: dict, national_avg_spike_rate: float,
             for c in d["top_commodities"][:3]
         ) or "No commodities recorded"
 
-        prompt = f"""You are a senior food security analyst at WFP writing an official situation report for NGO partners and government stakeholders in Malawi.
+        prompt = f"""You are a field analyst at WFP Malawi writing an internal situation brief for a colleague who will present to donors tomorrow morning.
 
-Write a professional 5-paragraph situation report for **{d['name']} District** based on the data below.
+Write a sharp, direct 5-paragraph brief on **{d['name']} District**. Your colleague knows food security — skip the textbook definitions. Get to the point.
 
 --- DATA ---
-Region:                  {d['region']}
-National risk rank:      {rank} of {total_districts} districts
-Composite risk score:    {d['risk_score']} ({_risk_label(d['risk_score'])} risk)
-Critical price spikes:   {d['critical_count']}
-Severe price spikes:     {d['severe_count']}
-Moderate price spikes:   {d['moderate_count']}
-Spike rate:              {d['spike_rate_pct']:.1f}% (national average: {national_avg_spike_rate:.1f}%)
-Monitored markets:       {d['market_count']}
-Average price (MWK):     {d['avg_price']:,.0f}
-Most affected commodities: {top_commodities_text}
-Analysis period:         January 2020 – April 2026
-Current season:          {_season(datetime.now().month)} ({datetime.now().strftime('%B %Y')})
+Region: {d['region']}
+National risk rank: {rank} of {total_districts}
+Risk score: {d['risk_score']} ({_risk_label(d['risk_score'])})
+Critical spikes: {d['critical_count']} | Severe: {d['severe_count']} | Moderate: {d['moderate_count']}
+Spike rate: {d['spike_rate_pct']:.1f}% vs national average {national_avg_spike_rate:.1f}%
+Markets monitored: {d['market_count']}
+Avg price: MWK {d['avg_price']:,.0f}
+Top commodities: {", ".join(f"{c['commodity']} ({c['critical_count']} critical)" for c in d["top_commodities"][:3]) or "No data"}
+Period: Jan 2020 – Apr 2026
+Season: {_season(datetime.now().month)}, {datetime.now().strftime('%B %Y')}
 --- END DATA ---
 
-Structure your report with exactly these 5 paragraphs in this order:
+Paragraph 1 — SITUATION: What's the headline? Where does this district stand nationally and why does it matter right now?
 
-1. **OVERVIEW** — National ranking and overall risk profile. Is the district above or below the national average spike rate? What does the composite risk score mean in practical terms?
+Paragraph 2 — DRIVERS: What's driving the spikes? Which commodities, and what does that mean for actual households — not in abstract terms, but concretely?
 
-2. **COMMODITY ANALYSIS** — Which commodities are most severely affected? Why does this matter for household food security and nutrition in this district? Reference the most affected commodities by name.
+Paragraph 3 — GAPS: What can't we see? What does the monitoring coverage tell us about our blind spots?
 
-3. **MARKET MONITORING** — How many markets are monitored? Is coverage adequate for a district of this risk level? What are the implications of monitoring gaps for early warning?
+Paragraph 4 — SEASON: It's {_season(datetime.now().month)}. What does that mean for this district specifically — relief, continued stress, or something more complicated?
 
-4. **SEASONAL CONTEXT** — How does the current season ({_season(datetime.now().month)}) affect food security dynamics in this district? What seasonal risks should field teams anticipate?
+Paragraph 5 — WHAT NEEDS TO HAPPEN: Not a generic list. Three sharp, specific actions tied to what this data actually shows. Reference MW2063 once, naturally — don't force it.
 
-5. **RECOMMENDED ACTIONS** — Three to four specific, actionable recommendations for NGO field teams, DODMA, and district councils. Reference Malawi Vision 2063 (MW2063) Agricultural Productivity and Food Security pillar where appropriate.
-
-Writing style requirements:
-- Professional humanitarian report tone — no casual language
-- Write in flowing paragraphs, NOT bullet points
-- Be specific with numbers from the data provided
-- Each paragraph should be 3–4 sentences
-- Total length: 320–420 words
-- Do not add headers or labels to paragraphs — write them as continuous prose
-- Do not start with "I" or "This report"
+Rules:
+- Write like a human analyst, not a policy document
+- No "it is recommended that" — say what needs to happen directly  
+- No bullet points, no numbered lists, no headers
+- Vary sentence length — mix short punchy sentences with longer ones
+- Total: 300-380 words
+- Don't start with the district name
 """
 
         response = client.models.generate_content(

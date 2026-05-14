@@ -50,10 +50,10 @@ const SECTION_LABELS: Record<string, string> = {
 
 const SECTION_ORDER = [
   "opening",
-  "commodities",
+  "commodity",
   "monitoring",
   "seasonal",
-  "recommendation",
+  "recommendations",
 ]
 
 export default function NarrativePanel({ districtName }: { districtName: string }) {
