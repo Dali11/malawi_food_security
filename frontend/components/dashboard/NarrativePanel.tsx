@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react"
 
+const narrativeCache = new Map<string, NarrativeData>()
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
 
 interface NarrativeParagraphs {
   opening: string
@@ -63,20 +65,32 @@ export default function NarrativePanel({ districtName }: { districtName: string 
   const [copied, setCopied]   = useState(false)
 
   useEffect(() => {
-    if (!districtName) return
-    setLoading(true)
-    setData(null)
-    setError("")
+  if (!districtName) return
 
-    fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
-      .then(r => {
-        if (!r.ok) throw new Error(`API error: ${r.status}`)
-        return r.json()
-      })
-      .then((d: NarrativeData) => setData(d))
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [districtName])
+  // Check cache first
+  const cached = narrativeCache.get(districtName)
+  if (cached) {
+    setData(cached)
+    setLoading(false)
+    return
+  }
+
+  setLoading(true)
+  setData(null)
+  setError("")
+
+  fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
+    .then(r => {
+      if (!r.ok) throw new Error(`API error: ${r.status}`)
+      return r.json()
+    })
+    .then((d: NarrativeData) => {
+      narrativeCache.set(districtName, d)  // Store in cache
+      setData(d)
+    })
+    .catch(e => setError(e.message))
+    .finally(() => setLoading(false))
+}, [districtName])
 
   function copyNarrative() {
     if (!data?.narrative) return
@@ -190,6 +204,27 @@ export default function NarrativePanel({ districtName }: { districtName: string 
                 })
               )}
             </div>
+
+            {/* {data.source === "template" && (
+              <button
+                onClick={() => {
+                  narrativeCache.delete(districtName)
+                  setData(null)
+                  setLoading(true)
+                  fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
+                    .then(r => r.json())
+                    .then((d: NarrativeData) => {
+                      if (d.source === "gemini") narrativeCache.set(districtName, d)
+                      setData(d)
+                    })
+                    .catch(e => setError(e.message))
+                    .finally(() => setLoading(false))
+                }}
+                className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-700 text-slate-500 hover:bg-slate-800 transition-colors mt-2"
+              >
+                ↺ Retry with AI
+              </button>
+            )} */}
           </>
         )}
       </div>
