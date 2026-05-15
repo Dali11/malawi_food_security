@@ -93,10 +93,6 @@ Frame uncertain drivers cautiously using phrases like:
 Avoid repeating the same terminology excessively.
 Use varied professional food security and market analysis language.
 Write in concise humanitarian assessment language similar to FEWS NET or WFP district situation reports.
-Recommendations should include:
-- market surveillance actions,
-- household food access interventions,
-- and resilience-building measures.
 """
 
         response = client.models.generate_content(
