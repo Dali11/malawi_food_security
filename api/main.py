@@ -10,6 +10,7 @@ from api.database import connect, disconnect
 from api.routers import districts, markets, spikes, summary, reports
 from api.routers import districts, markets, spikes, summary, reports, compare
 from api.routers import districts, markets, spikes, summary, reports, compare, narrative
+from api.routers import districts, markets, spikes, summary, reports, compare, narrative, forecast
 
 # ── App setup ─────────────────────────────────────────────────
 app = FastAPI(
@@ -45,6 +46,7 @@ app.include_router(summary.router)
 app.include_router(reports.router)
 app.include_router(compare.router)
 app.include_router(narrative.router)
+app.include_router(forecast.router)
 
 # ── Health check ──────────────────────────────────────────────
 @app.get("/", tags=["Health"])
