@@ -24,6 +24,7 @@ interface NarrativeData {
   generated_at: string
   narrative: string
   paragraphs: NarrativeParagraphs
+  source: "gemini" | "template"
 }
 
 const TIER_COLORS: Record<string, { border: string; label: string; bg: string }> = {
