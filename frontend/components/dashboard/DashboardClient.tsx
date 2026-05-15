@@ -113,7 +113,9 @@ export default function DashboardClient() {
         </main>
 
         {/* ── Right panel ── */}
-        <aside className="w-64 flex-shrink-0 bg-slate-900 border-l border-slate-700 overflow-hidden">
+        <aside className={`flex-shrink-0 bg-slate-900 border-l border-slate-700 overflow-hidden transition-all duration-300 ${
+            selectedDistrict ? "w-80" : "w-64"
+          }`}>
           {selectedDistrict ? (
             <DistrictPopup
               district={selectedDistrict}
