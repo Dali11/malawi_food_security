@@ -40,47 +40,89 @@ def _season(month: int) -> str:
     if month in [6, 7, 8]:      return "Post-harvest period"
     return "Lean season"
 
-
 def _run_prophet(df: pd.DataFrame, months: int) -> pd.DataFrame:
-    """Run Prophet forecast. Returns forecast dataframe."""
     from prophet import Prophet
 
-    # Prophet requires columns: ds (date), y (value)
     df_prophet = df[["date", "avg_price"]].rename(
         columns={"date": "ds", "avg_price": "y"}
     )
     df_prophet["ds"] = pd.to_datetime(df_prophet["ds"])
-    df_prophet = df_prophet.dropna().sort_values("ds")
+    df_prophet = df_prophet.dropna().sort_values("ds").reset_index(drop=True)
 
-    # Add Malawi-specific seasonality
+    # ── Fill gaps with interpolation ──────────────────────────
+    # Create complete monthly date range
+    full_range = pd.date_range(
+        start=df_prophet["ds"].min(),
+        end=df_prophet["ds"].max(),
+        freq="MS"
+    )
+    df_full = pd.DataFrame({"ds": full_range})
+    df_full = df_full.merge(df_prophet, on="ds", how="left")
+
+    # Linear interpolation for missing months
+    df_full["y"] = df_full["y"].interpolate(method="linear")
+    df_full["y"] = df_full["y"].clip(lower=50)
+
+    # ── Logistic growth bounds ────────────────────────────────
+    last_price      = df_prophet["y"].iloc[-1]
+    df_full["cap"]  = last_price * 2.2
+    df_full["floor"]= last_price * 0.4
+
+    # ── Prophet model ─────────────────────────────────────────
+    date_range_months = (
+        (df_full["ds"].max().year - df_full["ds"].min().year) * 12 +
+        df_full["ds"].max().month - df_full["ds"].min().month
+    )
+    has_full_year = date_range_months >= 12
+
     model = Prophet(
-        yearly_seasonality  = True,
-        weekly_seasonality  = False,
-        daily_seasonality   = False,
-        seasonality_mode    = "multiplicative",  # better for food prices
-        interval_width      = 0.80,              # 80% confidence interval
-        changepoint_prior_scale = 0.05,          # conservative — avoids overfitting
+        yearly_seasonality      = has_full_year,
+        weekly_seasonality      = False,
+        daily_seasonality       = False,
+        seasonality_mode        = "additive",
+        interval_width          = 0.80,
+        changepoint_prior_scale = 0.005,
+        seasonality_prior_scale = 1.0,
+        growth                  = "logistic",
     )
 
-    model.fit(df_prophet)
+    model.fit(df_full)
 
-    # Create future dataframe
-    future = model.make_future_dataframe(periods=months, freq="MS")  # Month Start
-    forecast = model.predict(future)
+    future          = model.make_future_dataframe(periods=months, freq="MS")
+    future["cap"]   = last_price * 2.2
+    future["floor"] = last_price * 0.4
+    forecast        = model.predict(future)
 
-    # Return only future months
-    last_date = df_prophet["ds"].max()
+    last_date       = df_full["ds"].max()
     future_forecast = forecast[forecast["ds"] > last_date][
         ["ds", "yhat", "yhat_lower", "yhat_upper"]
     ].copy()
 
-    # Clip negative values (prices can't be negative)
-    future_forecast["yhat"]       = future_forecast["yhat"].clip(lower=0)
-    future_forecast["yhat_lower"] = future_forecast["yhat_lower"].clip(lower=0)
-    future_forecast["yhat_upper"] = future_forecast["yhat_upper"].clip(lower=0)
+    # ── Sanity clip ───────────────────────────────────────────
+    future_forecast["yhat"]       = future_forecast["yhat"].clip(
+        lower=last_price * 0.4, upper=last_price * 2.2)
+    future_forecast["yhat_lower"] = future_forecast["yhat_lower"].clip(
+        lower=last_price * 0.3, upper=last_price * 2.2)
+    future_forecast["yhat_upper"] = future_forecast["yhat_upper"].clip(
+        lower=last_price * 0.4, upper=last_price * 2.5)
+
+    # Fix inverted bounds
+    mask = future_forecast["yhat_lower"] > future_forecast["yhat_upper"]
+    future_forecast.loc[mask, "yhat_lower"] = future_forecast.loc[mask, "yhat"] * 0.85
+    future_forecast.loc[mask, "yhat_upper"] = future_forecast.loc[mask, "yhat"] * 1.15
 
     return future_forecast
 
+
+def _run_forecast(df: pd.DataFrame, months: int) -> pd.DataFrame:
+    """
+    Use Prophet if 20+ months available, 
+    otherwise use seasonal naive forecast.
+    """
+    if len(df) >= 20:
+        return _run_prophet(df, months)
+    else:
+        return _run_seasonal_naive(df, months)
 
 @router.get("/{district_name}")
 async def forecast_district(
@@ -108,17 +150,34 @@ async def forecast_district(
 
         # Fetch monthly average prices
         rows = await conn.fetch("""
-            SELECT
-                DATE_TRUNC('month', date::date)::date AS date,
-                ROUND(AVG(price::numeric), 2)          AS avg_price,
-                COUNT(*)                               AS observations
-            FROM prices
-            WHERE LOWER(district)  = LOWER($1)
-              AND LOWER(commodity) = LOWER($2)
-              AND unit = 'KG'
-              AND price IS NOT NULL
-              AND price::numeric > 0
-            GROUP BY DATE_TRUNC('month', date::date)
+            WITH monthly AS (
+                SELECT
+                    DATE_TRUNC('month', date::date)::date AS date,
+                    ROUND(AVG(price::numeric), 2)          AS avg_price,
+                    COUNT(*)                               AS observations
+                FROM prices
+                WHERE LOWER(district)  = LOWER($1)
+                AND LOWER(commodity) = LOWER($2)
+                AND unit = 'KG'
+                AND price IS NOT NULL
+                AND price::numeric > 50
+                GROUP BY DATE_TRUNC('month', date::date)
+                HAVING COUNT(*) >= 2
+            )
+            SELECT * FROM monthly
+            WHERE date >= (
+                -- Use data from the year where we have at least 6 months coverage
+                SELECT DATE_TRUNC('year', month)::date
+                FROM (
+                    SELECT DATE_TRUNC('month', date::date) AS month
+                    FROM monthly
+                    GROUP BY DATE_TRUNC('month', date::date)
+                ) m
+                GROUP BY DATE_TRUNC('year', month)
+                HAVING COUNT(*) >= 6
+                ORDER BY DATE_TRUNC('year', month) DESC
+                LIMIT 1
+            )
             ORDER BY date
         """, district_name, commodity)
 
@@ -134,11 +193,11 @@ async def forecast_district(
               )
         """, district_name, commodity)
 
-    if not rows or len(rows) < 12:
+    if not rows or len(rows) < 6:
         raise HTTPException(
             status_code=422,
-            detail=f"Insufficient data to forecast {commodity} prices in {district_name}. "
-                   f"Need at least 12 months of data, found {len(rows) if rows else 0}."
+            detail=f"Insufficient recent data to forecast {commodity} in {district_name}. "
+                f"Need at least 6 months of consistent data."
         )
 
     # Build dataframe
@@ -150,7 +209,7 @@ async def forecast_district(
 
     # Run Prophet
     try:
-        forecast_df = _run_prophet(df, months)
+        forecast_df =  _run_prophet(df, months)
     except Exception as e:
         log.error(f"Prophet failed for {district_name}/{commodity}: {e}")
         raise HTTPException(status_code=500,
@@ -221,6 +280,8 @@ async def forecast_district(
             f"No immediate intervention required."
         )
 
+    method = "Facebook Prophet"
+    
     return {
         "district"         : district_check["name_1"],
         "commodity"        : commodity,
@@ -231,11 +292,7 @@ async def forecast_district(
         "trend"            : trend,
         "insight"          : _insight(alert_level, trend, commodity, months),
         "forecast"         : forecast_points,
-        "methodology"      : (
-            "Facebook Prophet time series model with multiplicative seasonality. "
-            "80% confidence interval. Trained on WFP VAM monthly price data "
-            "January 2020 – April 2026."
-        ),
+        "methodology"      : f"{method} · {len(df)} monthly observations · 80% confidence interval",
     }
 
 
