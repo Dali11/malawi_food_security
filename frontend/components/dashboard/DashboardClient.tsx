@@ -24,10 +24,10 @@ export default function DashboardClient() {
   const [activeBasemap,    setActiveBasemap   ] = useState(0)
   const [forecastOpen,     setForecastOpen    ] = useState(false)
 
-  function handleDistrictClick(district: DistrictDetail) {
-    setSelectedDistrict(district)
-    setForecastOpen(false)  // close forecast when switching districts
-  }
+  function handleDistrictClick(district: DistrictDetail | null) {
+  setSelectedDistrict(district)
+  setForecastOpen(false)
+}
 
   function handleClose() {
     setSelectedDistrict(null)
