@@ -4,10 +4,14 @@
 @source "../app/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";
 
+body {
+  background: #0a0a0a !important;
+}
+
 /* Leaflet tooltip dark theme */
 .map-tooltip {
-  background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
+  background-color: #0b0d0f !important;
+  border: 1px solid #000000 !important;
   color: #e2e8f0 !important;
   font-size: 12px !important;
   font-family: monospace !important;
@@ -15,14 +19,14 @@
 
 /* Leaflet popup dark theme */
 .leaflet-popup-content-wrapper {
-  background: #161616;
+  background: #020202;
   color: #e2e8f0;
-  border: 1px solid #334155;
+  border: 1px solid #080808;
   border-radius: 8px;
 }
 
 .leaflet-popup-tip {
-  background: #1e293b;
+  background: #070708;
 }
 /* Fix Chromium square focus box on Leaflet polygon click */
 .leaflet-interactive:focus {
@@ -37,4 +41,9 @@
 path.leaflet-interactive:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+html, body {
+  background: #030303 !important;
+  min-height: 100%;
 }

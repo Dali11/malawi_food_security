@@ -34,7 +34,7 @@ export default function AlertPanel() {
           return (
             <div
               key={i}
-              className="px-3 py-2 border-b border-slate-800 hover:bg-slate-800 cursor-pointer"
+              className="px-3 py-2 border-b border-slate-800 hover:bg-[#111111] cursor-pointer"
             >
               <div className="flex justify-between items-start">
                 <div className="text-xs font-medium text-slate-200">

@@ -9,7 +9,7 @@ export default function StatsPanel() {
     return (
       <div className="grid grid-cols-2 gap-2 p-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-slate-800 rounded-lg p-3 animate-pulse h-20" />
+          <div key={i} className="bg-[#111111] rounded-lg p-3 animate-pulse h-20" />
         ))}
       </div>
     )
@@ -20,7 +20,7 @@ export default function StatsPanel() {
       {stats.map((s) => (
         <div
           key={s.label}
-          className="bg-slate-800 border border-slate-700 rounded-lg p-3"
+          className="bg-[#111111] border border-slate-700 rounded-lg p-3"
         >
           <div className="text-slate-400 text-xs font-mono uppercase tracking-wide mb-1">
             {s.label}

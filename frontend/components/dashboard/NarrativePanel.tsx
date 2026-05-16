@@ -149,7 +149,7 @@ export default function NarrativePanel({ districtName }: { districtName: string 
             {/* Skeleton lines */}
             <div className="space-y-2 mt-3">
             {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-slate-800 rounded animate-pulse"
+                <div key={i} className="bg-[#111111] rounded animate-pulse"
                 style={{ height: 8, width: `${70 + Math.random() * 30}%` }} />
             ))}
             </div>
@@ -221,7 +221,7 @@ export default function NarrativePanel({ districtName }: { districtName: string 
                     .catch(e => setError(e.message))
                     .finally(() => setLoading(false))
                 }}
-                className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-700 text-slate-500 hover:bg-slate-800 transition-colors mt-2"
+                className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-700 text-slate-500 hover:bg-[#111111] transition-colors mt-2"
               >
                 ↺ Retry with AI
               </button>
@@ -235,7 +235,7 @@ export default function NarrativePanel({ districtName }: { districtName: string 
         <div className="px-3 py-2 border-t border-slate-700">
           <button
             onClick={copyNarrative}
-            className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-600 text-slate-300 hover:bg-[#111111] transition-colors"
           >
             {copied ? (
               <span>✓ Copied to clipboard</span>

@@ -12,7 +12,7 @@ export interface BasemapConfig {
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
   ssr    : false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+    <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
       <div className="text-slate-400 text-sm font-mono animate-pulse">
         Loading map...
       </div>

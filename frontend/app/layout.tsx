@@ -23,9 +23,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`} style={{ background: "#050A12" }}
     >
-      <body className="h-full bg-slate-950 text-slate-100">
+      <body className="h-full  text-slate-100" style={{ background: "#0a0a0a" }}>
         {children}
       </body>
     </html>

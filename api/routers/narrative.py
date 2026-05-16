@@ -15,7 +15,7 @@ from google import genai as google_genai
 import logging
 import os
 
-load_dotenv()
+load_dotenv(override=False)
 
 router = APIRouter(prefix="/api/narrative", tags=["Narrative"])
 log    = logging.getLogger(__name__)

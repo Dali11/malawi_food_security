@@ -118,7 +118,7 @@ export default function LeafletMap({
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-900">
+      <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
         <p className="text-slate-400 font-mono text-sm animate-pulse">
           Loading spatial layers...
         </p>
