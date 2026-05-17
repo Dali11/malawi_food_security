@@ -16,10 +16,11 @@ export default function Header() {
     return () => clearInterval(timer);
   }, []);
 
+  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
   const downloadReport = async () => {
     setLoading(true);
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(`${API}/api/reports/generate`);
       if (!res.ok) throw new Error("Failed to generate report");
       const blob = await res.blob();
@@ -36,6 +37,22 @@ export default function Header() {
     }
   };
 
+  const downloadExport = async() => {
+    try {
+      const res =  await fetch(`${API}/api/export/excel`)
+      if(!res.ok) throw new Error("Failed to export")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a  = document.createElement('a')
+      a.href  = url
+      a.download = `malawi_food_security_${new Date().toISOString().slice(0,10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert("Export Failed: " + (err instanceof Error ? err.message : "unknown error"))
+    }
+  }
+
   return (
     <header className="h-12 bg-[#0a0a0a] border-b border-slate-700 flex items-center justify-between px-4">
       <div className="flex items-center gap-3">
@@ -47,8 +64,8 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* comparison */}
-        {/* <ComparisonPanel /> */}
+       
+        
         {/* Export button */}
         <button
           onClick={downloadReport}
@@ -74,6 +91,15 @@ export default function Header() {
               Export Report
             </>
           )}
+        </button>
+
+        <button
+          onClick={downloadExport}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
+             bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600
+             transition-colors"
+        >
+          ⬇ Export Excel
         </button>
 
         {/* Live indicator */}
