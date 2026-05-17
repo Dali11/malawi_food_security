@@ -7,10 +7,7 @@ Malawi Food Security GIS API — Phase 4
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.database import connect, disconnect
-from api.routers import districts, markets, spikes, summary, reports
-from api.routers import districts, markets, spikes, summary, reports, compare
-from api.routers import districts, markets, spikes, summary, reports, compare, narrative
-from api.routers import districts, markets, spikes, summary, reports, compare, narrative, forecast
+from api.routers import districts, markets, spikes, summary, reports, compare, narrative, forecast, export
 
 # ── App setup ─────────────────────────────────────────────────
 app = FastAPI(
@@ -47,6 +44,7 @@ app.include_router(reports.router)
 app.include_router(compare.router)
 app.include_router(narrative.router)
 app.include_router(forecast.router)
+app.include_router(export.router)
 
 # ── Health check ──────────────────────────────────────────────
 @app.get("/", tags=["Health"])
