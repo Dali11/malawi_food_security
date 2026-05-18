@@ -54,7 +54,7 @@ export default function Header() {
   }
 
   return (
-    <header className="h-12 bg-[#0a0a0a] border-b border-slate-700 flex items-center justify-between px-4">
+    <header className="h-12 bg-slate-900 border-b border-slate-700 flex items-center justify-between px-4">
       <div className="flex items-center gap-3">
         <span className="font-bold text-slate-100 text-sm tracking-wide">
           Malawi Food Security Monitor

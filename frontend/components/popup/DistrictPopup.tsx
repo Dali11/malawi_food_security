@@ -30,11 +30,11 @@ export default function DistrictPopup({ district, onClose, onForecastOpen }: Dis
   // Reset to stats tab when district changes
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] border-l border-slate-700 overflow-y-auto">
+    <div className="flex flex-col h-full bg-slate-900 border-l border-slate-700 overflow-y-auto">
 
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 sticky top-0 bg-[#0a0a0a] z-10">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 sticky top-0 bg-slate-900 z-10">
         <div>
           <div className="font-bold text-slate-100">{district.district}</div>
           <div className="text-xs text-slate-400">{district.region}</div>
@@ -153,7 +153,7 @@ export default function DistrictPopup({ district, onClose, onForecastOpen }: Dis
                 <div className="text-xs text-slate-600">No critical spikes</div>
               )}
               {district.recent_critical_spikes.map((s, i) => (
-                <div key={i} className="bg-[#111111] rounded p-2">
+                <div key={i} className="bg-slate-800 rounded p-2">
                   <div className="flex justify-between text-xs">
                     <span className="font-medium text-slate-200">{s.commodity}</span>
                     <span className="font-bold text-red-400">+{s.pct_change}%</span>

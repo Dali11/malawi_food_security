@@ -162,7 +162,7 @@ export default function ForecastDrawer({
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4
-                      border-b border-slate-700 bg-[#0a0a0a] flex-shrink-0"
+                      border-b border-slate-700 bg-slate-900 flex-shrink-0"
            style={{ background: "#1B3A6B" }}>
         <div>
           <p className="text-base font-semibold text-white">
@@ -204,11 +204,11 @@ export default function ForecastDrawer({
         {/* Loading skeleton */}
         {loading && (
           <div className="space-y-3">
-            <div className="bg-[#111111] rounded-lg animate-pulse h-12"/>
-            <div className="bg-[#111111] rounded-lg animate-pulse h-56"/>
+            <div className="bg-slate-800 rounded-lg animate-pulse h-12"/>
+            <div className="bg-slate-800 rounded-lg animate-pulse h-56"/>
             <div className="grid grid-cols-3 gap-3">
               {[1,2,3].map(i => (
-                <div key={i} className="bg-[#111111] rounded-lg animate-pulse h-24"/>
+                <div key={i} className="bg-slate-800 rounded-lg animate-pulse h-24"/>
               ))}
             </div>
           </div>
@@ -253,7 +253,7 @@ export default function ForecastDrawer({
             </div>
 
             {/* Chart */}
-            <div className="bg-[#111111]/50 rounded-xl p-4">
+            <div className="bg-slate-800/50 rounded-xl p-4">
               <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">
                 {commodity} price forecast — MWK/KG
               </p>
@@ -273,7 +273,7 @@ export default function ForecastDrawer({
             {/* Month cards */}
             <div className="grid grid-cols-3 gap-3">
               {data.forecast.map((f, i) => (
-                <div key={i} className="bg-[#111111] rounded-xl p-4">
+                <div key={i} className="bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-500 mb-1">{f.month_label}</p>
                   <p className="text-xs text-slate-600 mb-2">{f.season}</p>
                   <p className="text-2xl font-bold font-mono mb-2"

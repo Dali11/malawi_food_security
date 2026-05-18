@@ -1,49 +1,34 @@
 @import "tailwindcss";
-
 @source "../components/**/*.{ts,tsx}";
 @source "../app/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";
-
-body {
-  background: #0a0a0a !important;
-}
-
 /* Leaflet tooltip dark theme */
 .map-tooltip {
-  background-color: #0b0d0f !important;
-  border: 1px solid #000000 !important;
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
   color: #e2e8f0 !important;
   font-size: 12px !important;
   font-family: monospace !important;
 }
-
 /* Leaflet popup dark theme */
 .leaflet-popup-content-wrapper {
-  background: #020202;
+  background: #1e293b;
   color: #e2e8f0;
-  border: 1px solid #080808;
+  border: 1px solid #334155;
   border-radius: 8px;
 }
-
 .leaflet-popup-tip {
-  background: #070708;
+  background: #1e293b;
 }
 /* Fix Chromium square focus box on Leaflet polygon click */
 .leaflet-interactive:focus {
   outline: none !important;
 }
-
 .leaflet-interactive {
   outline: none !important;
 }
-
 /* Ensure SVG paths have no focus ring in all browsers */
 path.leaflet-interactive:focus {
   outline: none !important;
   box-shadow: none !important;
-}
-
-html, body {
-  background: #030303 !important;
-  min-height: 100%;
 }

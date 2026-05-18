@@ -39,7 +39,7 @@ export default function DashboardClient() {
       
      
       {/* Filter toolbar */}
-      <div className="flex items-center gap-4 px-4 py-2 bg-[#0a0a0a] border-b border-slate-700">
+      <div className="flex items-center gap-4 px-4 py-2 bg-slate-900 border-b border-slate-700">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 font-mono uppercase tracking-widest">Spikes</span>
           <div className="flex gap-1">
@@ -77,7 +77,7 @@ export default function DashboardClient() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Left sidebar ── */}
-        <aside className={`flex-shrink-0 bg-[#0a0a0a] border-r border-slate-700 flex flex-col overflow-hidden transition-all duration-300 ${
+        <aside className={`flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col overflow-hidden transition-all duration-300 ${
           selectedDistrict ? "w-80" : "w-64"
         }`}>
           {!selectedDistrict && <StatsPanel />}
@@ -100,7 +100,7 @@ export default function DashboardClient() {
           />
 
           {/* Legend */}
-          <div className="absolute bottom-4 left-4 z-[400] bg-[#0a0a0a]/90 border border-slate-700 rounded-lg p-3 text-xs">
+          <div className="absolute bottom-4 left-4 z-[400] bg-slate-900/90 border border-slate-700 rounded-lg p-3 text-xs">
             <div className="text-slate-400 uppercase tracking-widest mb-2 font-mono text-xs">District Risk</div>
             {[
               { label: "Critical", color: "#B71C1C" },
@@ -129,7 +129,7 @@ export default function DashboardClient() {
         
          {/* ── Right panel (district stats) ── */}
           <div className="absolute top-0 right-0 bottom-0 w-64 z-[500]
-                          bg-[#0a0a0a] border-l border-slate-700 overflow-hidden">
+                          bg-slate-900 border-l border-slate-700 overflow-hidden">
             {selectedDistrict && !forecastOpen ? (
               <DistrictPopup
                 district={selectedDistrict}
@@ -164,7 +164,7 @@ export default function DashboardClient() {
               {/* Drawer */}
               <div
                 className="absolute top-0 right-0 bottom-0 z-[600]
-                           bg-[#0a0a0a] border-l border-slate-700 overflow-hidden
+                           bg-slate-900 border-l border-slate-700 overflow-hidden
                            animate-slide-in"
                 style={{ width: "55%" }}
               >
