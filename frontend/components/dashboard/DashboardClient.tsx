@@ -8,6 +8,7 @@ import AlertPanel     from "@/components/dashboard/AlertPanel"
 import NarrativePanel from "@/components/dashboard/NarrativePanel"
 import ForecastDrawer from "@/components/dashboard/ForecastDrawer"
 import type { DistrictDetail } from "@/lib/types"
+import MapLegend from "../map/MapLegend"
 
 /* ── Breakpoint hook ─────────────────────────────────────────────────────── */
 type BP = "mobile" | "tablet" | "desktop"
@@ -36,35 +37,37 @@ const SEVERITIES = ["All", "Critical", "Severe", "Moderate"] as const
 type SeverityFilter = typeof SEVERITIES[number]
 
 /* ── Legend ─────────────────────────────────────────────────────────────── */
-function MapLegend() {
-  return (
-    <div className="absolute bottom-4 left-4 z-[400] bg-slate-900/90 border border-slate-700 rounded-lg p-3 text-xs">
-      <div className="text-slate-400 uppercase tracking-widest mb-2 font-mono text-xs">District Risk</div>
-      {[
-        { label: "Critical", color: "#B71C1C" },
-        { label: "High",     color: "#EF5350" },
-        { label: "Moderate", color: "#FFAB40" },
-        { label: "Low",      color: "#FFE082" },
-        { label: "Stable",   color: "#A5D6A7" },
-      ].map(item => (
-        <div key={item.label} className="flex items-center gap-2 mb-1">
-          <div className="w-4 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-          <span className="text-slate-300">{item.label}</span>
-        </div>
-      ))}
-      <div className="border-t border-slate-700 mt-2 pt-2 space-y-1">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-700" />
-          <span className="text-slate-300">Critical spike</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-700" />
-          <span className="text-slate-300">Market</span>
-        </div>
-      </div>
-    </div>
-  )
-}
+// function MapLegend() {
+//   return (
+//     <div className="absolute bottom-4 left-4 z-[400] bg-slate-900/90 border border-slate-700 rounded-lg p-3 text-xs">
+//       <div className="text-slate-400 uppercase tracking-widest mb-2 font-mono text-xs">District Risk</div>
+//       {[
+//         { label: "Critical", color: "#B71C1C" },
+//         { label: "High",     color: "#EF5350" },
+//         { label: "Moderate", color: "#FFAB40" },
+//         { label: "Low",      color: "#FFE082" },
+//         { label: "Stable",   color: "#A5D6A7" },
+//       ].map(item => (
+//         <div key={item.label} className="flex items-center gap-2 mb-1">
+//           <div className="w-4 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
+//           <span className="text-slate-300">{item.label}</span>
+//         </div>
+//       ))}
+//       <div className="border-t border-slate-700 mt-2 pt-2 space-y-1">
+//         <div className="flex items-center gap-2">
+//           <div className="w-3 h-3 rounded-full bg-red-700" />
+//           <span className="text-slate-300">Critical spike</span>
+//         </div>
+//         <div className="flex items-center gap-2">
+//           <div className="w-3 h-3 rounded-full bg-blue-700" />
+//           <span className="text-slate-300">Market</span>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+<MapLegend />
 
 /* ── Mobile bottom drawer ────────────────────────────────────────────────── */
 function MobileDrawer({
