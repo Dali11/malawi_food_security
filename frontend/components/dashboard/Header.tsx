@@ -1,5 +1,5 @@
 "use client";
-import { Download } from "lucide-react";
+import { Download, FileText, Sheet } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -150,10 +150,7 @@ export default function Header() {
                        bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700
                        disabled:opacity-50 transition-colors text-left"
           >
-            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 12l-4-4h2.5V4h3v4H12L8 12z"/>
-              <path d="M2 13h12v1.5H2z"/>
-            </svg>
+            <FileText size={10}/>
             {loading ? "Generating PDF…" : "Export Situation Report (PDF)"}
           </button>
 
@@ -164,7 +161,9 @@ export default function Header() {
                        bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700
                        transition-colors text-left"
           >
-            <span className="text-base">⬇</span>
+            <span className="text-base">
+              <Sheet size={10}/>
+            </span>
             Export Data (Excel)
           </button>
         </div>
