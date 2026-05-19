@@ -1,13 +1,8 @@
 "use client"
 
+import { MapContainerProps } from "@/lib/types"
 import dynamic from "next/dynamic"
-import type { DistrictDetail } from "@/lib/types"
 
-export interface BasemapConfig {
-  name : string
-  url  : string
-  attr : string
-}
 
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
   ssr    : false,
@@ -19,12 +14,6 @@ const LeafletMap = dynamic(() => import("./LeafletMap"), {
     </div>
   ),
 })
-
-interface MapContainerProps {
-  onDistrictClick : (district: DistrictDetail | null) => void
-  severityFilter  : string
-  basemap         : BasemapConfig
-}
 
 export default function MapContainer(props: MapContainerProps) {
   return (

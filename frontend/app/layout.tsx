@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Malawi Food Security Monitor",
-  description: "WFP food price spike detection and district risk analysis",
+  description: "Malawi Food price spike detection and district risk analysis",
 }
 
 export default function RootLayout({

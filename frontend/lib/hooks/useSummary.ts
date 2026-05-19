@@ -2,14 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { getSummary } from "@/lib/api"
-import type { Summary } from "@/lib/types"
+import type { StatItem, Summary } from "@/lib/types"
 
-export interface StatItem {
-  label : string
-  value : string | number
-  sub   : string
-  color : string
-}
+
 
 export function useSummary() {
   const [summary, setSummary] = useState<Summary | null>(null)

@@ -1,3 +1,4 @@
+import { LEGEND } from "@/lib/constants"
 import { useState } from "react"
 
 // 3. Compact legend on mobile — replace MapLegend component:
@@ -18,13 +19,7 @@ const MapLegend = () => {
 
       {!collapsed && (
         <div className="px-2.5 pb-2 space-y-1">
-          {[
-            { label: "Critical", color: "#B71C1C" },
-            { label: "High",     color: "#EF5350" },
-            { label: "Moderate", color: "#FFAB40" },
-            { label: "Low",      color: "#FFE082" },
-            { label: "Stable",   color: "#A5D6A7" },
-          ].map(item => (
+          {LEGEND.map(item => (
             <div key={item.label} className="flex items-center gap-2">
               <div className="w-3 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
               <span className="text-slate-300">{item.label}</span>

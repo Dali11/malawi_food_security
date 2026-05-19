@@ -1,5 +1,4 @@
-// ── GeoJSON base types ─────────────────────────────────────────────────────
-
+// ── GeoJSON base types ───────────────────────────────────────────────────
 export interface GeoJSONPoint {
   type: "Point"
   coordinates: [number, number]   // [longitude, latitude]
@@ -9,6 +8,29 @@ export interface GeoJSONPolygon {
   type: "Polygon" | "MultiPolygon"
   coordinates: number[][][] | number[][][][]
 }
+
+// ── Base Map─────────────────────────────────────────
+export interface BasemapConfig {
+  name : string
+  url  : string
+  attr : string
+}
+
+export interface MapContainerProps {
+  onDistrictClick : (district: DistrictDetail | null) => void
+  severityFilter  : string
+  basemap         : BasemapConfig
+}
+
+
+// ── Leaflet ───────────────────────────────────────────────────
+export interface LeafletMapProps {
+  onDistrictClick : (district: DistrictDetail | null) => void
+  severityFilter  : string
+  basemap         : BasemapConfig
+}
+
+
 
 // ── District ───────────────────────────────────────────────────────────────
 
@@ -133,6 +155,13 @@ export interface Summary {
   }
 }
 
+export interface StatItem {
+  label : string
+  value : string | number
+  sub   : string
+  color : string
+}
+
 // ── UI state ───────────────────────────────────────────────────────────────
 
 export type SeverityLevel = "Critical" | "Severe" | "Moderate" | "Normal"
@@ -158,4 +187,29 @@ export interface PriceTrend {
   commodity : string
   count     : number
   prices    : PricePoint[]
+}
+
+// ── Forecast────────────────────────────────────────────────────────────
+export interface ForecastPoint {
+  month          : string
+  month_label    : string
+  season         : string
+  forecast       : number
+  lower_bound    : number
+  upper_bound    : number
+  risk_level     : string
+  pct_vs_baseline: number
+}
+
+export interface ForecastData {
+  district         : string
+  commodity        : string
+  generated_at     : string
+  data_points_used : number
+  baseline_price   : number
+  alert_level      : string
+  trend            : string
+  insight          : string
+  forecast         : ForecastPoint[]
+  methodology      : string
 }

@@ -11,13 +11,13 @@ import L from "leaflet"
 import type { Feature, GeoJsonObject } from "geojson"
 import type {
   DistrictCollection, MarketCollection,
-  SpikeCollection, DistrictDetail
+  SpikeCollection,
+  LeafletMapProps
 } from "@/lib/types"
 import {
   getDistricts, getMarkets, getSpikes,
   getRiskColor, getSeverityColor, getDistrict
 } from "@/lib/api"
-import type { BasemapConfig } from "./MapContainer"
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -37,12 +37,6 @@ function FitMalawi() {
     map.fitBounds(MALAWI_BOUNDS, { padding: [10, 10] })
   }, [map])
   return null
-}
-
-interface LeafletMapProps {
-  onDistrictClick : (district: DistrictDetail | null) => void
-  severityFilter  : string
-  basemap         : BasemapConfig
 }
 
 export default function LeafletMap({
