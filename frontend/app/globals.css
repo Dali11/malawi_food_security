@@ -2,6 +2,21 @@
 @source "../components/**/*.{ts,tsx}";
 @source "../app/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";
+
+
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 /* Leaflet tooltip dark theme */
 .map-tooltip {
   background-color: #1e293b !important;
@@ -31,4 +46,13 @@
 path.leaflet-interactive:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Full viewport fix for mobile */
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
