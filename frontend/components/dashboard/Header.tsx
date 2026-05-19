@@ -128,7 +128,7 @@ export default function Header() {
             aria-label="Menu"
           >
             <span className="">
-              <Download size={12} />
+              <Download size={14} />
             </span>
           </button>
         </div>
@@ -138,7 +138,7 @@ export default function Header() {
       {menuOpen && (
         <div className="md:hidden border-t border-slate-700 bg-slate-900 px-4 py-3 space-y-2">
           {/* Date row */}
-          <div className="text-xs text-slate-500 font-mono pb-1 border-b border-slate-800">
+          <div className="text-xs text-slate-500 font-mono hidden pb-1 border-b border-slate-800">
             {date}
           </div>
 
