@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import DistrictPopup from "../popup/DistrictPopup"
 import ForecastDrawer from "./ForecastDrawer"
 import { DistrictDetail } from "@/lib/types"
+import { X } from "lucide-react"
 
 export function MobileDrawer({
   district,
@@ -30,7 +31,7 @@ export function MobileDrawer({
  const heightMap = {
   peek: "20vh",
   half: "55vh",
-  full: "calc(100% - 98px)", 
+  full: "calc(100% - 88px)", 
 }
 
   function onTouchStart(e: React.TouchEvent) {
@@ -69,12 +70,12 @@ export function MobileDrawer({
         </div>
 
         {/* Dismiss button */}
-        <button
+        {/* <button
           onClick={onClose}
           className="absolute top-3 right-4 text-slate-500 hover:text-slate-300 text-lg"
         >
-          ✕
-        </button>
+          X 
+        </button> */}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
