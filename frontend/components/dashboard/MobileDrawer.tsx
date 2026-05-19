@@ -36,12 +36,15 @@ export function MobileDrawer({
   function onTouchStart(e: React.TouchEvent) {
     startY.current = e.touches[0].clientY
   }
-  function onTouchEnd(e: React.TouchEvent) {
+ function onTouchEnd(e: React.TouchEvent) {
     const dy = startY.current - e.changedTouches[0].clientY
-    if (dy > 40) setDrawerHeight(h => h === "peek" ? "half" : "full")
-    if (dy < -40) setDrawerHeight(h => h === "full" ? "half" : "peek")
+    if (dy > 40) {
+      setDrawerHeight(h => h === "peek" ? "half" : "full")
+    }
+    if (dy < -60) {
+      setDrawerHeight(h => h === "full" ? "half" : h)
+    }
   }
-
   return (
     <>
       {/* Backdrop */}
@@ -53,11 +56,15 @@ export function MobileDrawer({
       <div
         className="absolute bottom-0 left-0 right-0 z-[700] bg-slate-900 border-t border-slate-700 rounded-t-2xl overflow-hidden flex flex-col transition-all duration-300"
         style={{ height: heightMap[drawerHeight] }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+
       >
+        
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div 
+          className="flex justify-center pt-3 pb-1 flex-shrink-0 curso-grab"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           <div className="w-10 h-1 rounded-full bg-slate-600" />
         </div>
 
@@ -70,7 +77,7 @@ export function MobileDrawer({
         </button>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {forecastOpen && district ? (
             <ForecastDrawer district={district} onClose={onForecastClose} />
           ) : district ? (
