@@ -27,11 +27,11 @@ export function MobileDrawer({
 
   if (!district && !forecastOpen) return null
 
-  const heightMap = {
-    peek: "20vh",
-    half: "55vh",
-    full: "90vh",
-  }
+ const heightMap = {
+  peek: "20vh",
+  half: "55vh",
+  full: "calc(100% - 98px)", 
+}
 
   function onTouchStart(e: React.TouchEvent) {
     startY.current = e.touches[0].clientY
