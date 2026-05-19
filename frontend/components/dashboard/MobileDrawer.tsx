@@ -21,7 +21,7 @@ export function MobileDrawer({
 
   // Reset when district changes
   useEffect(() => {
-    if (district) setDrawerHeight("half")
+    if (district) setDrawerHeight("full")
     else setDrawerHeight("peek")
   }, [district])
 
