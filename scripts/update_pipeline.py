@@ -55,6 +55,10 @@ FOOD_CATEGORIES = [
     'vegetables and fruits'
 ]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 1 — Download
+# ─────────────────────────────────────────────────────────────────────────────
+
 def download_wfp_data() -> pd.DataFrame:
     log.info("Downloading latest WFP data from HDX...")
     response = requests.get(WFP_URL, timeout=120)
@@ -63,57 +67,135 @@ def download_wfp_data() -> pd.DataFrame:
     log.info(f"Downloaded {len(df):,} total records")
     return df
 
-def get_existing_dates(conn) -> set:
-    log.info("Fetching existing dates from database...")
-    with conn.cursor() as cur:
-        cur.execute("SELECT DISTINCT date FROM prices")
-        dates = {str(row[0]) for row in cur.fetchall()}
-    log.info(f"Found {len(dates)} existing date records in database")
-    return dates
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 2 — Fetch existing keys (composite fingerprint per row)
+# ─────────────────────────────────────────────────────────────────────────────
 
-def clean_new_data(df_raw: pd.DataFrame, existing_dates: set) -> pd.DataFrame:
+def get_existing_keys(conn) -> set:
+    """
+    Returns a set of (date_str, district, market, commodity, unit) tuples
+    already in the database. This replaces the old date-only check so we
+    catch WFP corrections to existing rows as well as genuinely new rows.
+    """
+    log.info("Fetching existing row keys from database...")
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT date::text, district, market, commodity, unit
+            FROM prices
+        """)
+        keys = {(str(r[0]), r[1], r[2], r[3], r[4]) for r in cur.fetchall()}
+    log.info(f"Found {len(keys):,} existing row keys in database")
+    return keys
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 3 — Clean & split: new rows vs already-known rows
+# ─────────────────────────────────────────────────────────────────────────────
+
+def clean_new_data(df_raw: pd.DataFrame, existing_keys: set):
+    """
+    Returns (new_rows, df_standard).
+
+    new_rows    — rows whose composite key is not in the DB at all.
+    df_standard — the full cleaned/standardised dataframe (KG + L units),
+                  passed to detect_revisions() when new_rows is empty.
+    """
     log.info("Cleaning and filtering new data...")
     df = df_raw.copy()
 
-    # Parse dates
+    # Parse & filter dates
     df['date'] = pd.to_datetime(df['date'])
-
-    # ── CRITICAL: Keep only 2020 onwards ──────────────────────────────────
     df = df[df['date'] >= '2020-01-01']
 
-    # Filter food categories
+    # Filter food categories and remove national average
     df = df[df['category'].isin(FOOD_CATEGORIES)]
-
-    # Remove national average
     df = df[df['market'] != 'National Average']
 
     # Drop nulls
     df = df.dropna(subset=['admin2', 'price'])
 
-    # Rename
+    # Rename columns
     df = df.rename(columns={'admin1': 'region', 'admin2': 'district'})
 
     # Split standardised vs informal
     df_standard = df[df['unit'].isin(['KG', 'L'])].copy()
     df_informal  = df[df['unit'].isin(['Heap', 'Bunch', 'Unit'])].copy()
 
-    # Find new rows only
-    df_standard['date_str'] = df_standard['date'].astype(str)
-    new_standard = df_standard[~df_standard['date_str'].isin(existing_dates)]
+    # Build composite key for each standardised row
+    df_standard['_row_key'] = list(zip(
+        df_standard['date'].astype(str),
+        df_standard['district'],
+        df_standard['market'],
+        df_standard['commodity'],
+        df_standard['unit']
+    ))
+
+    # New rows = composite key not yet in DB
+    new_rows = df_standard[~df_standard['_row_key'].isin(existing_keys)].copy()
 
     log.info(f"Standardised records in download : {len(df_standard):,}")
-    log.info(f"New standardised records         : {len(new_standard):,}")
+    log.info(f"New records (unseen keys)        : {len(new_rows):,}")
     log.info(f"Informal records (not loaded)    : {len(df_informal):,}")
 
-    if len(new_standard) == 0:
-        log.info("No new data found — database is up to date")
-        return pd.DataFrame()
+    if len(new_rows) == 0:
+        log.info("No new rows — will check for price revisions on existing rows...")
+        return pd.DataFrame(), df_standard
 
-    new_standard = new_standard.sort_values(
-        ['district', 'market', 'commodity', 'date']
-    ).reset_index(drop=True)
+    return (
+        new_rows.sort_values(['district', 'market', 'commodity', 'date'])
+                .reset_index(drop=True),
+        df_standard
+    )
 
-    return new_standard
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 4 — Detect price revisions on rows already in the DB
+# ─────────────────────────────────────────────────────────────────────────────
+
+def detect_revisions(conn, df_standard: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compares every standardised row in the fresh CSV against the price
+    stored in the DB for the same composite key. Returns rows where
+    WFP has silently corrected the price (difference > 0.01 MWK).
+    """
+    log.info("Checking for price revisions on existing rows...")
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT date::text, district, market, commodity, unit, price
+            FROM prices
+        """)
+        db_prices = {
+            (str(r[0]), r[1], r[2], r[3], r[4]): float(r[5])
+            for r in cur.fetchall()
+            if r[5] is not None
+        }
+
+    revisions = []
+    for _, row in df_standard.iterrows():
+        key = (
+            str(row['date'].date()),
+            row['district'],
+            row['market'],
+            row['commodity'],
+            row['unit']
+        )
+        db_price = db_prices.get(key)
+        if db_price is not None and abs(float(row['price']) - db_price) > 0.01:
+            revisions.append(row)
+            log.info(
+                f"  Revision detected: {key} | "
+                f"DB={db_price:.2f} → WFP={float(row['price']):.2f}"
+            )
+
+    if revisions:
+        log.info(f"Found {len(revisions):,} price revision(s)")
+        return pd.DataFrame(revisions).reset_index(drop=True)
+
+    log.info("No price revisions found — database is truly up to date")
+    return pd.DataFrame()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 5 — Load historical data for spike context
+# ─────────────────────────────────────────────────────────────────────────────
 
 def load_historical_data(conn) -> pd.DataFrame:
     log.info("Loading historical data for spike detection context...")
@@ -132,10 +214,13 @@ def load_historical_data(conn) -> pd.DataFrame:
     log.info(f"Loaded {len(df):,} historical records")
     return df
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 6 — Spike detection
+# ─────────────────────────────────────────────────────────────────────────────
+
 def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFrame:
     log.info("Running spike detection on new data...")
 
-    # Ensure numeric types
     df_history['price'] = pd.to_numeric(df_history['price'], errors='coerce')
     df_new['price']     = pd.to_numeric(df_new['price'],     errors='coerce')
     df_history = df_history.dropna(subset=['price'])
@@ -175,22 +260,27 @@ def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFram
         conditions, choices, default='Normal'
     )
 
-    new_dates  = set(df_new['date'].astype(str).unique())
-    df_result  = df_combined[df_combined['date'].astype(str).isin(new_dates)].copy()
+    new_dates = set(df_new['date'].astype(str).unique())
+    df_result = df_combined[df_combined['date'].astype(str).isin(new_dates)].copy()
+
     new_spikes = df_result[df_result['spike_severity'] != 'Normal']
     critical   = df_result[df_result['spike_severity'] == 'Critical']
 
-    log.info(f"New records processed    : {len(df_result):,}")
-    log.info(f"New spike events         : {len(new_spikes):,}")
-    log.info(f"New critical events      : {len(critical):,}")
+    log.info(f"New records processed : {len(df_result):,}")
+    log.info(f"New spike events      : {len(new_spikes):,}")
+    log.info(f"New critical events   : {len(critical):,}")
 
     return df_result
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 7 — Upsert into prices table
+# ─────────────────────────────────────────────────────────────────────────────
 
 def insert_new_data(conn, df_new: pd.DataFrame) -> int:
     if len(df_new) == 0:
         return 0
 
-    log.info(f"Inserting {len(df_new):,} new records into database...")
+    log.info(f"Upserting {len(df_new):,} records into prices table...")
 
     columns = [
         'date', 'region', 'district', 'market',
@@ -210,18 +300,30 @@ def insert_new_data(conn, df_new: pd.DataFrame) -> int:
 
     records = df_new[columns].values.tolist()
 
+    # ON CONFLICT upsert — handles both new rows AND price revisions
     insert_sql = f"""
         INSERT INTO prices ({', '.join(columns)})
         VALUES %s
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (date, district, market, commodity, unit)
+        DO UPDATE SET
+            price          = EXCLUDED.price,
+            usdprice       = EXCLUDED.usdprice,
+            pct_change     = EXCLUDED.pct_change,
+            zscore         = EXCLUDED.zscore,
+            is_spike       = EXCLUDED.is_spike,
+            spike_severity = EXCLUDED.spike_severity
     """
 
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, insert_sql, records, page_size=1000)
         conn.commit()
 
-    log.info(f"Inserted {len(records):,} records successfully")
+    log.info(f"Upserted {len(records):,} records successfully")
     return len(records)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 8 — Update spikes table
+# ─────────────────────────────────────────────────────────────────────────────
 
 def update_spikes_table(conn, df_new: pd.DataFrame) -> None:
     new_spikes = df_new[
@@ -236,7 +338,6 @@ def update_spikes_table(conn, df_new: pd.DataFrame) -> None:
 
     log.info(f"Adding {len(new_spikes):,} new spike events to spikes table...")
 
-    # Ensure correct types
     new_spikes['date']       = pd.to_datetime(new_spikes['date']).dt.date
     new_spikes['price']      = pd.to_numeric(new_spikes['price'],      errors='coerce')
     new_spikes['pct_change'] = pd.to_numeric(new_spikes['pct_change'], errors='coerce')
@@ -283,6 +384,10 @@ def update_spikes_table(conn, df_new: pd.DataFrame) -> None:
 
     log.info(f"Added {inserted:,} new spike events")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 9 — Rebuild district risk scores
+# ─────────────────────────────────────────────────────────────────────────────
+
 def rebuild_district_risk(conn) -> None:
     log.info("Rebuilding district risk scores...")
     with conn.cursor() as cur:
@@ -300,12 +405,12 @@ def rebuild_district_risk(conn) -> None:
             FROM (
                 SELECT
                     district,
-                    COUNT(*)                                                          AS total_records,
-                    SUM(CASE WHEN is_spike = 'true'        THEN 1 ELSE 0 END)        AS total_spikes,
-                    SUM(CASE WHEN spike_severity='Critical' THEN 1 ELSE 0 END)       AS critical_count,
-                    SUM(CASE WHEN spike_severity='Severe'   THEN 1 ELSE 0 END)       AS severe_count,
-                    SUM(CASE WHEN spike_severity='Moderate' THEN 1 ELSE 0 END)       AS moderate_count,
-                    ROUND(AVG(price::numeric)::numeric, 0)                            AS avg_price
+                    COUNT(*)                                                    AS total_records,
+                    SUM(CASE WHEN is_spike = 'true'         THEN 1 ELSE 0 END) AS total_spikes,
+                    SUM(CASE WHEN spike_severity='Critical'  THEN 1 ELSE 0 END) AS critical_count,
+                    SUM(CASE WHEN spike_severity='Severe'    THEN 1 ELSE 0 END) AS severe_count,
+                    SUM(CASE WHEN spike_severity='Moderate'  THEN 1 ELSE 0 END) AS moderate_count,
+                    ROUND(AVG(price::numeric)::numeric, 0)                      AS avg_price
                 FROM prices
                 GROUP BY district
             ) sub
@@ -313,6 +418,10 @@ def rebuild_district_risk(conn) -> None:
         """)
         conn.commit()
     log.info("District risk scores rebuilt successfully")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 10 — Log pipeline run
+# ─────────────────────────────────────────────────────────────────────────────
 
 def log_pipeline_run(conn, stats: dict) -> None:
     conn.rollback()
@@ -344,6 +453,10 @@ def log_pipeline_run(conn, stats: dict) -> None:
         conn.commit()
     log.info("Pipeline run logged to database")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN — Orchestration
+# ─────────────────────────────────────────────────────────────────────────────
+
 def run_pipeline():
     log.info("=" * 60)
     log.info("MALAWI FOOD SECURITY — DATA UPDATE PIPELINE")
@@ -365,20 +478,33 @@ def run_pipeline():
         conn = psycopg2.connect(**DB_CONFIG)
         log.info("Connected successfully")
 
-        df_raw         = download_wfp_data()
-        existing_dates = get_existing_dates(conn)
-        df_new         = clean_new_data(df_raw, existing_dates)
+        # --- Download fresh CSV from HDX ---
+        df_raw = download_wfp_data()
 
+        # --- Get composite keys already in DB ---
+        existing_keys = get_existing_keys(conn)                      
+
+        # --- Split into genuinely new rows vs already-known rows ---
+        df_new, df_standard = clean_new_data(df_raw, existing_keys) 
+
+        # --- If no new rows, check whether WFP revised any prices ---
         if len(df_new) == 0:
-            stats['status'] = 'success'
-            stats['notes']  = 'No new data available'
-            log_pipeline_run(conn, stats)
-            return stats
+            df_new = detect_revisions(conn, df_standard)             
+            if len(df_new) == 0:
+                stats['status'] = 'success'
+                stats['notes']  = 'No new data or price revisions — database is up to date'
+                log_pipeline_run(conn, stats)
+                return stats
+            stats['notes'] = 'Price revisions detected and applied'
 
+        # --- Run spike detection with full historical context ---
         df_history   = load_historical_data(conn)
         df_processed = detect_spikes(df_new, df_history)
-        inserted     = insert_new_data(conn, df_processed)
 
+        # --- Upsert into prices (handles both new rows and revisions) ---
+        inserted = insert_new_data(conn, df_processed)
+
+        # --- Update spikes table and district risk scores ---
         update_spikes_table(conn, df_processed)
         rebuild_district_risk(conn)
 
@@ -415,6 +541,7 @@ def run_pipeline():
         if conn:
             conn.close()
             log.info("Database connection closed")
+
 
 if __name__ == "__main__":
     run_pipeline()
