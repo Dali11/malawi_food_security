@@ -237,7 +237,7 @@ export default function DashboardClient() {
                     ? "bg-slate-200 border-slate-200 text-slate-900 font-bold"
                     : "border-slate-600 text-slate-400"
                 }`}>
-                {s}
+                {s === "Moderate" ? "Mod" : s}
               </button>
             ))}
           </div>

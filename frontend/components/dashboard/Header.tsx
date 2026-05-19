@@ -1,4 +1,5 @@
 "use client";
+import { Download } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -64,10 +65,8 @@ export default function Header() {
           <span className="font-bold text-slate-100 tracking-wide text-sm whitespace-nowrap">
             {/* Full title on md+, short on mobile */}
             <span className="hidden md:inline">Malawi Food Security </span>
-            <span className="inline md:hidden">Malawi Food Security Monitor</span>
+            <span className="inline md:hidden">Malawi Food Security</span>
           </span>
-          <span className="text-slate-600 text-sm hidden sm:inline">/</span>
-          <span className="text-slate-400 text-xs hidden sm:inline truncate">WFP VAM · 2020–2026</span>
         </div>
 
         {/* Right — actions */}
@@ -120,7 +119,7 @@ export default function Header() {
           </div>
 
           {/* Date — hidden on mobile */}
-          <span className="text-xs text-slate-500 font-mono hidden sm:inline">{date}</span>
+          <span className="text-xs text-slate-500 font-mono block sm:inline">{date}</span>
 
           {/* Mobile overflow menu button */}
           <button
@@ -128,9 +127,9 @@ export default function Header() {
             className="md:hidden flex flex-col gap-1 p-2 rounded hover:bg-slate-800"
             aria-label="Menu"
           >
-            <span className="w-4 h-0.5 bg-slate-400 block" />
-            <span className="w-4 h-0.5 bg-slate-400 block" />
-            <span className="w-4 h-0.5 bg-slate-400 block" />
+            <span className="">
+              <Download size={12} />
+            </span>
           </button>
         </div>
       </div>
