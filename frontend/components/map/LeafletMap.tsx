@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState } from "react"
 import {
   MapContainer, TileLayer, GeoJSON,
@@ -30,6 +29,29 @@ const MALAWI_BOUNDS: L.LatLngBoundsExpression = [
   [-17.13, 33.8],
   [-9.36,  35.5],
 ]
+
+/* ── Move zoom control to topright on mobile ─────────────────────────────── */
+function ResponsiveZoomControl() {
+  const map = useMap()
+  useEffect(() => {
+    // zoomControl is already disabled on MapContainer — just add on correct side
+    let zoomCtrl: L.Control.Zoom | null = null
+
+    function addZoom() {
+      if (zoomCtrl) { zoomCtrl.remove(); zoomCtrl = null }
+      const position = window.innerWidth < 768 ? "topright" : "topleft"
+      zoomCtrl = L.control.zoom({ position }).addTo(map)
+    }
+
+    addZoom()
+    window.addEventListener("resize", addZoom)
+    return () => {
+      window.removeEventListener("resize", addZoom)
+      if (zoomCtrl) zoomCtrl.remove()
+    }
+  }, [map])
+  return null
+}
 
 function FitMalawi() {
   const map = useMap()
@@ -125,17 +147,17 @@ export default function LeafletMap({
       bounds={MALAWI_BOUNDS}
       boundsOptions={{ padding: [10, 10] }}
       className="w-full h-full"
-      zoomControl={true}
+      zoomControl={false}         /* ← disabled here, added by ResponsiveZoomControl */
     >
       <TileLayer
         key={basemap.url}
         url={basemap.url}
         attribution={`&copy; ${basemap.attr}`}
       />
-
       <FitMalawi />
+      <ResponsiveZoomControl />   {/* ← topright on mobile, topleft on desktop */}
 
-      {/* District choropleth — bottom layer */}
+      {/* District choropleth */}
       {districts && (
         <GeoJSON
           key="districts"
@@ -146,10 +168,7 @@ export default function LeafletMap({
       )}
 
       {/* Market points — clustered */}
-      <MarkerClusterGroup
-        chunkedLoading
-        maxClusterRadius={30}
-      >
+      <MarkerClusterGroup chunkedLoading maxClusterRadius={30}>
         {markets?.features.map((f, i) => {
           const [lng, lat] = f.geometry.coordinates
           const p = f.properties
@@ -181,11 +200,8 @@ export default function LeafletMap({
         })}
       </MarkerClusterGroup>
 
-      {/* Spike markers — clustered, above everything */}
-      <MarkerClusterGroup
-        chunkedLoading
-        maxClusterRadius={25}
-      >
+      {/* Spike markers — clustered */}
+      <MarkerClusterGroup chunkedLoading maxClusterRadius={25}>
         {spikes?.features.map((f, i) => {
           const [lng, lat] = f.geometry.coordinates
           const p = f.properties
@@ -221,7 +237,6 @@ export default function LeafletMap({
           )
         })}
       </MarkerClusterGroup>
-
     </MapContainer>
   )
 }
