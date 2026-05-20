@@ -1,13 +1,19 @@
 "use client";
+import { usePipelineStatus } from "@/lib/hooks/usepipelineStatus";
 import { Download, FileText, Sheet } from "lucide-react";
 import { useState, useEffect } from "react";
+import PipelineStatusBar from "./Pipelinestatusbar";
+
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Header() {
-  const [date, setDate]       = useState("");
-  const [loading, setLoading] = useState(false);
+  const [date, setDate]         = useState("");
+  const [loading, setLoading]   = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Pipeline status — used to enrich the LIVE indicator
+  const { status: pipelineStatus } = usePipelineStatus();
 
   useEffect(() => {
     const format = () =>
@@ -54,6 +60,13 @@ export default function Header() {
     }
   };
 
+  // Format last pipeline run time for the LIVE tooltip
+  const lastRunLabel = pipelineStatus?.run_at
+    ? new Date(pipelineStatus.run_at).toLocaleDateString("en-GB", {
+        day: "2-digit", month: "short", year: "numeric",
+      })
+    : null;
+
   return (
     <header className="bg-slate-900 border-b border-slate-700 flex-shrink-0">
 
@@ -63,7 +76,6 @@ export default function Header() {
         {/* Left — title */}
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-bold text-slate-100 tracking-wide text-sm whitespace-nowrap">
-            {/* Full title on md+, short on mobile */}
             <span className="hidden md:inline">Malawi Food Security </span>
             <span className="inline md:hidden">Malawi Food Security</span>
           </span>
@@ -110,12 +122,29 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Live indicator */}
-          <div className="flex items-center gap-1.5">
+          {/* Live indicator — shows last pipeline run date on hover */}
+          <div
+            className="flex items-center gap-1.5 group relative cursor-default"
+            title={lastRunLabel ? `Last updated: ${lastRunLabel}` : "Live monitoring active"}
+          >
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
             <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest hidden sm:inline">
               Live
             </span>
+
+            {/* Tooltip — last pipeline run */}
+            {lastRunLabel && (
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:block
+                              bg-slate-800 border border-slate-700 rounded px-2 py-1
+                              text-xs text-slate-300 font-mono whitespace-nowrap z-50 shadow-xl">
+                Last sync: {lastRunLabel}
+                {pipelineStatus?.new_records ? (
+                  <span className="ml-1 text-emerald-400">
+                    (+{pipelineStatus.new_records.toLocaleString()} records)
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Date — hidden on mobile */}
@@ -134,15 +163,16 @@ export default function Header() {
         </div>
       </div>
 
+      {/* ── Pipeline status bar — shown below main bar when data changed ── */}
+      <PipelineStatusBar />
+
       {/* ── Mobile dropdown menu ─────────────────────────────────────────── */}
       {menuOpen && (
         <div className="md:hidden border-t border-slate-700 bg-slate-900 px-4 py-3 space-y-2">
-          {/* Date row */}
           <div className="text-xs text-slate-500 font-mono hidden pb-1 border-b border-slate-800">
             {date}
           </div>
 
-          {/* Export PDF */}
           <button
             onClick={() => { downloadReport(); setMenuOpen(false); }}
             disabled={loading}
@@ -154,7 +184,6 @@ export default function Header() {
             {loading ? "Generating PDF…" : "Export Situation Report (PDF)"}
           </button>
 
-          {/* Export Excel */}
           <button
             onClick={() => { downloadExcel(); setMenuOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm
