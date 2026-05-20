@@ -155,12 +155,9 @@ export default function DashboardClient() {
               selectedDistrict={selectedDistrict}
             />
 
-            <MobileDrawer
+           <MobileDrawer
               district={selectedDistrict}
               onClose={handleClose}
-              onForecastOpen={() => setForecastOpen(true)}
-              forecastOpen={forecastOpen}
-              onForecastClose={() => setForecastOpen(false)}
             />
           </div>
 
@@ -318,7 +315,7 @@ export default function DashboardClient() {
           {/* Heatmap view */}
           {activeView === "heatmap" && (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <HeatmapPanel />
+                <HeatmapPanel />
             </div>
           )}
         </div>
@@ -463,7 +460,7 @@ export default function DashboardClient() {
         {/* Heatmap view — full width, replaces map area */}
         {activeView === "heatmap" && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <HeatmapPanel />
+             <HeatmapPanel />
           </div>
         )}
       </div>

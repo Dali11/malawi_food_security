@@ -1,95 +1,117 @@
+"use client"
 import { useEffect, useRef, useState } from "react"
-import DistrictPopup from "../popup/DistrictPopup"
+import DistrictPopup  from "../popup/DistrictPopup"
 import ForecastDrawer from "./ForecastDrawer"
+import NarrativePanel from "./NarrativePanel"
 import { DistrictDetail } from "@/lib/types"
-import { X } from "lucide-react"
+
+type MobileTab = "stats" | "report" | "forecast"
 
 export function MobileDrawer({
   district,
   onClose,
-  onForecastOpen,
-  forecastOpen,
-  onForecastClose,
 }: {
   district: DistrictDetail | null
   onClose: () => void
-  onForecastOpen: () => void
-  forecastOpen: boolean
-  onForecastClose: () => void
 }) {
-  const [drawerHeight, setDrawerHeight] = useState<"peek" | "half" | "full">("peek")
+  const [drawerHeight, setDrawerHeight] = useState<"half" | "full">("full")
+  const [activeTab,    setActiveTab   ] = useState<MobileTab>("stats")
   const startY = useRef<number>(0)
 
-  // Reset when district changes
+  // Reset on district change
   useEffect(() => {
-    if (district) setDrawerHeight("full")
-    else setDrawerHeight("peek")
+    if (district) { setDrawerHeight("full"); setActiveTab("stats") }
   }, [district])
 
-  if (!district && !forecastOpen) return null
+  if (!district) return null
 
- const heightMap = {
-  peek: "20vh",
-  half: "55vh",
-  full: "calc(100% - 88px)", 
-}
+  const heightMap = {
+    half: "55vh",
+    full: "calc(100% - 88px)",  // clears header(48px) + toolbar(40px)
+  }
 
   function onTouchStart(e: React.TouchEvent) {
     startY.current = e.touches[0].clientY
   }
- function onTouchEnd(e: React.TouchEvent) {
+  function onTouchEnd(e: React.TouchEvent) {
     const dy = startY.current - e.changedTouches[0].clientY
-    if (dy > 40) {
-      setDrawerHeight(h => h === "peek" ? "half" : "full")
-    }
-    if (dy < -60) {
-      setDrawerHeight(h => h === "full" ? "half" : h)
-    }
+    if (dy > 40)  setDrawerHeight("full")
+    if (dy < -60) setDrawerHeight(h => h === "full" ? "half" : h)
+    // never goes below half — use close button to dismiss
   }
+
+  const TABS: { id: MobileTab; label: string }[] = [
+    { id: "stats",    label: "Stats"      },
+    { id: "report",   label: "AI Report"  },
+    { id: "forecast", label: "⚡ Forecast" },
+  ]
+
   return (
-    <>
-      {/* Backdrop */}
-      {(drawerHeight === "full") && (
-        <div className="absolute inset-0 z-[600] bg-black/40" onClick={onClose} />
-      )}
-
-      {/* Drawer */}
+    <div
+      className="absolute bottom-0 left-0 right-0 z-[700] bg-slate-900 border-t border-slate-700 rounded-t-2xl flex flex-col transition-all duration-300 overflow-hidden"
+      style={{ height: heightMap[drawerHeight] }}
+    >
+      {/* Drag handle — touch ONLY here */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-[700] bg-slate-900 border-t border-slate-700 rounded-t-2xl overflow-hidden flex flex-col transition-all duration-300"
-        style={{ height: heightMap[drawerHeight] }}
-
+        className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
-        
-        {/* Drag handle */}
-        <div 
-          className="flex justify-center pt-3 pb-1 flex-shrink-0 curso-grab"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
-          <div className="w-10 h-1 rounded-full bg-slate-600" />
-        </div>
-
-        {/* Dismiss button */}
-        {/* <button
-          onClick={onClose}
-          className="absolute top-3 right-4 text-slate-500 hover:text-slate-300 text-lg"
-        >
-          X 
-        </button> */}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          {forecastOpen && district ? (
-            <ForecastDrawer district={district} onClose={onForecastClose} />
-          ) : district ? (
-            <DistrictPopup
-              district={district}
-              onClose={onClose}
-              onForecastOpen={onForecastOpen}
-            />
-          ) : null}
-        </div>
+        <div className="w-10 h-1 rounded-full bg-slate-600" />
       </div>
-    </>
+
+      {/* District name + close */}
+      <div className="flex items-start justify-between px-4 pb-2 flex-shrink-0">
+        <div>
+          <h2 className="font-bold text-slate-100 text-base leading-tight">{district.district}</h2>
+          <p className="text-xs text-slate-500">{district.region}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 flex items-center justify-center rounded-full
+                     bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700
+                     transition-colors flex-shrink-0 ml-2 text-sm"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex border-b border-slate-700 flex-shrink-0 mx-1">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-yellow-500 text-yellow-400"
+                : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        {activeTab === "stats" && (
+          <DistrictPopup
+            district={district}
+            onClose={onClose}
+            onForecastOpen={() => setActiveTab("forecast")}
+          />
+        )}
+        {activeTab === "report" && (
+          <NarrativePanel districtName={district.district} />
+        )}
+        {activeTab === "forecast" && (
+          <ForecastDrawer
+            district={district}
+            onClose={() => setActiveTab("stats")}
+          />
+        )}
+      </div>
+    </div>
   )
 }
