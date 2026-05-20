@@ -25,7 +25,7 @@ export default function PipelineStatusBar() {
   const hasUpdates = status.new_records > 0
 
   // Nothing meaningful to show — pipeline ran but no changes
-//   if (!hasUpdates && !hasFailed) return null
+  if (!hasUpdates && !hasFailed) return null
 
   return (
     <div
