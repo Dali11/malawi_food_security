@@ -1,5 +1,6 @@
 import Header          from "@/components/dashboard/Header"
-import DashboardClient from "@/components/dashboard/DashboardClient"
+import DashboardClient from "./dashboard/page"
+
 
 export default function Home() {
   return (
