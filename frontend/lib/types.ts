@@ -214,3 +214,11 @@ export interface ForecastData {
   forecast         : ForecastPoint[]
   methodology      : string
 }
+
+export type MobileDrawerProps = {
+  district: DistrictDetail | null
+  onClose: () => void
+  onForecastOpen: () => void
+  forecastOpen: boolean
+  onForecastClose: () => void
+}

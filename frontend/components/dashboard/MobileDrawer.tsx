@@ -7,13 +7,21 @@ import { DistrictDetail } from "@/lib/types"
 
 type MobileTab = "stats" | "forecast" | "report"
 
+type MobileDrawerProps = {
+  district: DistrictDetail | null
+  onClose: () => void
+  onForecastOpen: () => void
+  forecastOpen: boolean
+  onForecastClose: () => void
+}
+
 export function MobileDrawer({
   district,
   onClose,
-}: {
-  district: DistrictDetail | null
-  onClose: () => void
-}) {
+  onForecastOpen,
+  forecastOpen,
+  onForecastClose,
+}: MobileDrawerProps) {
   const [drawerHeight, setDrawerHeight] = useState<"half" | "full">("full")
   const [activeTab,    setActiveTab   ] = useState<MobileTab>("stats")
   const startY = useRef<number>(0)
