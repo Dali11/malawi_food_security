@@ -41,6 +41,7 @@ export function useHeatmap() {
   const [data,    setData   ] = useState<HeatmapData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError  ] = useState<string | null>(null)
+  
 
   useEffect(() => {
     fetch(`${API}/api/heatmap/`)
@@ -51,3 +52,4 @@ export function useHeatmap() {
 
   return { data, loading, error }
 }
+

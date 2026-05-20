@@ -48,12 +48,12 @@ export default function ForecastDrawer({
             Price Forecast — {district.district}
           </p>
           <p className="text-xs mt-0.5" style={{ color: "#A8C4E8" }}>
-            3-month outlook · MFSM
+            3-month outlook · MFPI
           </p>
         </div>
         <button onClick={onClose}
           className="text-slate-400 hover:text-white text-xl leading-none
-                     bg-white/10 rounded px-2 py-1 transition-colors">
+                     bg-white/10 rounded px-2 py-1 transition-colors cursor-pointer">
           ✕
         </button>
       </div>
@@ -66,10 +66,10 @@ export default function ForecastDrawer({
         <div className="flex flex-wrap gap-2">
           {FORECAST_COMMODITIES.map(c => (
             <button key={c} onClick={() => setCommodity(c)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              className={`text-xs px-3 py-1 rounded-full border transition-colors cursor-pointer ${
                 commodity === c
                   ? "bg-yellow-500 border-yellow-500 text-slate-900 font-bold"
-                  : "border-slate-600 text-slate-400 hover:border-slate-400"
+                  : "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-800"
               }`}>
               {c}
             </button>
@@ -133,16 +133,16 @@ export default function ForecastDrawer({
 
             {/* Chart */}
             <div className="bg-slate-800/50 rounded-xl p-4">
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">
+              <p className="text-xs dark:text-slate-500 uppercase tracking-widest mb-3">
                 {commodity} price forecast — MWK/KG
               </p>
               <ForecastChart data={data} />
               <div className="flex gap-4 mt-2 flex-wrap">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-xs dark:text-slate-500">
                   <span className="inline-block w-4 h-0.5 bg-yellow-400"/>
                   12-month baseline
                 </span>
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-xs dark:text-slate-500">
                   <span className="inline-block w-3 h-3 rounded" style={{ background: "#FCEBEB", border: "0.5px solid #F09595" }}/>
                   80% confidence band
                 </span>
@@ -152,9 +152,9 @@ export default function ForecastDrawer({
             {/* Month cards */}
             <div className="grid grid-cols-3 gap-3">
               {data.forecast.map((f, i) => (
-                <div key={i} className="bg-slate-800 rounded-xl p-4">
+                <div key={i} className="bg-white border border-slate-200 shadow-md dark;border-none dark:bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-500 mb-1">{f.month_label}</p>
-                  <p className="text-xs text-slate-600 mb-2">{f.season}</p>
+                  <p className="text-xs text-slate-800 mb-2">{f.season}</p>
                   <p className="text-2xl font-bold font-mono mb-2"
                      style={{ color: riskColor(f.risk_level) }}>
                     {f.forecast.toLocaleString()}
@@ -169,12 +169,12 @@ export default function ForecastDrawer({
                     }}>
                       {f.risk_level}
                     </span>
-                    <span className="text-xs font-mono"
+                    <span className="text-xs font-mono "
                           style={{ color: riskColor(f.risk_level) }}>
                       {f.pct_vs_baseline > 0 ? "+" : ""}{f.pct_vs_baseline}%
                     </span>
                   </div>
-                  <div className="mt-2 text-xs text-slate-600">
+                  <div className="mt-2 text-xs text-slate-800">
                     {f.lower_bound.toLocaleString()} – {f.upper_bound.toLocaleString()} MWK
                   </div>
                 </div>

@@ -1,14 +1,11 @@
-import Header          from "@/components/dashboard/Header"
-import DashboardClient from "./dashboard/page"
+import Header         from "@/components/dashboard/Header"
+import DashboardClient from "@/components/dashboard/DashboardClient"
 
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col bg-slate-950 text-slate-100 overflow-hidden" style={{ height: "100dvh" }}>
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <DashboardClient />
-      </div>
-    </div>
+    <>
+      <Header activePage="dashboard" />
+      <DashboardClient />
+    </>
   )
 }

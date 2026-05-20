@@ -13,9 +13,9 @@ export const DISTRICTS = [
 ];
 
 export const BASEMAPS = [
-  { name: "Dark",          url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",                               attr: "CARTO"         },
-  { name: "OpenStreetMap", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                                         attr: "OpenStreetMap" },
-  { name: "Satellite",     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "Esri"        },
+  { name: "Default",          urlDark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",  urlLight: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attr: "CARTO"         },
+  { name: "OpenStreetMap", urlDark: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",             urlLight: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",            attr: "OpenStreetMap" },
+  { name: "Satellite",     urlDark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", urlLight: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "Esri" },
 ]
 
 

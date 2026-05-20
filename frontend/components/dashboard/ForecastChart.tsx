@@ -27,9 +27,9 @@ export function ForecastChart({ data }: { data: ForecastData }) {
         return (
           <g key={i}>
             <line x1={PAD_L} y1={y} x2={W - 20} y2={y}
-                  stroke="#1E293B" strokeWidth="1"/>
+                  stroke="#0f0f0f" strokeWidth="1"/>
             <text x={PAD_L - 4} y={y + 4} fontSize="10"
-                  fill="#475569" textAnchor="end">
+                  fill="#1b1d1f" textAnchor="end">
               {price >= 1000 ? `${(price/1000).toFixed(1)}k` : price}
             </text>
           </g>
@@ -57,7 +57,7 @@ export function ForecastChart({ data }: { data: ForecastData }) {
             {/* Confidence band */}
             <rect x={x + barW * 0.1} y={yHigh}
                   width={barW * 0.8} height={Math.abs(yLow - yHigh)}
-                  fill={color} opacity="0.12" rx="3"/>
+                  fill={color} opacity="0.1" rx="3"/>
 
             {/* Bar */}
             <rect x={x} y={yBar} width={barW} height={barH}
@@ -65,21 +65,21 @@ export function ForecastChart({ data }: { data: ForecastData }) {
 
             {/* Price label */}
             <text x={x + barW / 2} y={yBar - 6}
-                  fontSize="11" fill={color} textAnchor="middle" fontWeight="600">
+                  fontSize="16" fill={color} textAnchor="middle" fontWeight="700">
               {f.forecast >= 1000
                 ? `${(f.forecast/1000).toFixed(1)}k`
                 : f.forecast}
             </text>
 
             {/* Month label */}
-            <text x={x + barW / 2} y={H - 8}
-                  fontSize="10" fill="#64748B" textAnchor="middle">
+            <text x={x + barW / 2} y={H - 2}
+                  fontSize="15" fill="#000000" textAnchor="middle">
               {f.month_label.split(" ")[0]}
             </text>
 
             {/* Season label */}
             <text x={x + barW / 2} y={H - 18}
-                  fontSize="8" fill="#334155" textAnchor="middle">
+                  fontSize="10" fill="#0f0f0f" textAnchor="middle">
               {f.season.split(" ")[0]}
             </text>
           </g>

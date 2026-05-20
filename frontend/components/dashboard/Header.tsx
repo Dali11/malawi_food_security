@@ -1,96 +1,125 @@
-"use client";
-import { usePipelineStatus } from "@/lib/hooks/usepipelineStatus";
-import { Download, FileText, Sheet } from "lucide-react";
-import { useState, useEffect } from "react";
-import PipelineStatusBar from "./Pipelinestatusbar";
+"use client"
+import { Download, FileText, Sheet, Sun, Moon, LayoutGrid, Map } from "lucide-react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePipelineStatus } from "@/lib/hooks/usepipelineStatus"
+import PipelineStatusBar from "./Pipelinestatusbar"
+import { useTheme } from "../ThemeProvider"
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+interface HeaderProps {
+  activePage?: "dashboard" | "heatmap"
+}
 
-export default function Header() {
-  const [date, setDate]         = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Pipeline status — used to enrich the LIVE indicator
-  const { status: pipelineStatus } = usePipelineStatus();
+export default function Header({ activePage = "dashboard" }: HeaderProps) {
+  const [date, setDate]         = useState("")
+  const [loading, setLoading]   = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const { theme, toggle }       = useTheme()
+  const { status: pipelineStatus } = usePipelineStatus()
 
   useEffect(() => {
     const format = () =>
       new Date().toLocaleDateString("en-GB", {
         day: "2-digit", month: "short", year: "numeric",
-      });
-    setDate(format());
-    const timer = setInterval(() => setDate(format()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
+      })
+    setDate(format())
+    const timer = setInterval(() => setDate(format()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   const downloadReport = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const res = await fetch(`${API}/api/reports/generate`);
-      if (!res.ok) throw new Error("Failed to generate report");
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `malawi_food_security_${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const res = await fetch(`${API}/api/reports/generate`)
+      if (!res.ok) throw new Error("Failed to generate report")
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href     = url
+      a.download = `malawi_food_security_${new Date().toISOString().slice(0, 10)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (err) {
-      alert("Report generation failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      alert("Report generation failed: " + (err instanceof Error ? err.message : "Unknown error"))
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const downloadExcel = async () => {
     try {
-      const res  = await fetch(`${API}/api/export/excel`);
-      if (!res.ok) throw new Error("Failed to export");
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `malawi_food_security_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const res  = await fetch(`${API}/api/export/excel`)
+      if (!res.ok) throw new Error("Failed to export")
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href     = url
+      a.download = `malawi_food_security_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (err) {
-      alert("Export Failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      alert("Export Failed: " + (err instanceof Error ? err.message : "Unknown error"))
     }
-  };
+  }
 
-  // Format last pipeline run time for the LIVE tooltip
   const lastRunLabel = pipelineStatus?.run_at
     ? new Date(pipelineStatus.run_at).toLocaleDateString("en-GB", {
         day: "2-digit", month: "short", year: "numeric",
       })
-    : null;
+    : null
 
   return (
-    <header className="bg-slate-900 border-b border-slate-700 flex-shrink-0">
+    <header className="bg-white dark:bg-slate-900
+                       border-b border-slate-200 dark:border-slate-700
+                       flex-shrink-0">
 
-      {/* ── Main bar ─────────────────────────────────────────────────────── */}
+      {/* Main bar */}
       <div className="flex items-center justify-between px-3 md:px-4 h-12">
 
-        {/* Left — title */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-bold text-slate-100 tracking-wide text-sm whitespace-nowrap">
-            <span className="hidden md:inline">Malawi Food Security </span>
-            <span className="inline md:hidden">Malawi Food Security</span>
+        {/* Left — title + nav */}
+        <div className="flex items-center gap-4 min-w-0">
+          <span className="font-bold text-slate-900 dark:text-slate-100 tracking-wide md:text-lg whitespace-nowrap">
+            Malawi Food Price Intelligence
           </span>
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-2 ml-10">
+            <Link
+              href="/"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-mono transition-colors ${
+                activePage === "dashboard"
+                  ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+            >
+              <Map size={12} /> Dashboard
+            </Link>
+            <Link
+              href="/heatmap"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-mono transition-colors ${
+                activePage === "heatmap"
+                  ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-500"
+              }`}
+            >
+              <LayoutGrid size={12} /> Heatmap
+            </Link>
+          </nav>
         </div>
 
         {/* Right — actions */}
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
 
-          {/* Export buttons — visible on md+ */}
+          {/* Export buttons */}
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={downloadReport}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
-                         bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer
+                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
+                         text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
                          disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
@@ -111,35 +140,48 @@ export default function Header() {
                 </>
               )}
             </button>
-
             <button
               onClick={downloadExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
-                         bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer
+                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
+                         text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
                          transition-colors"
             >
               ⬇ Export Excel
             </button>
           </div>
 
-          {/* Live indicator — shows last pipeline run date on hover */}
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="p-1.5 rounded border transition-colors
+                       border-slate-200 dark:border-slate-700
+                       hover:bg-slate-100 dark:hover:bg-slate-800 ml-5"
+          >
+            {theme === "dark"
+              ? <Sun  size={14} className="text-amber-400" />
+              : <Moon size={14} className="text-slate-500" />
+            }
+          </button>
+
+          {/* Live indicator */}
           <div
             className="flex items-center gap-1.5 group relative cursor-default"
             title={lastRunLabel ? `Last updated: ${lastRunLabel}` : "Live monitoring active"}
           >
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest hidden sm:inline">
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden sm:inline">
               Live
             </span>
-
-            {/* Tooltip — last pipeline run */}
             {lastRunLabel && (
               <div className="absolute top-full right-0 mt-2 hidden group-hover:block
-                              bg-slate-800 border border-slate-700 rounded px-2 py-1
-                              text-xs text-slate-300 font-mono whitespace-nowrap z-50 shadow-xl">
+                              bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                              rounded px-2 py-1 text-xs font-mono text-slate-700 dark:text-slate-300
+                              whitespace-nowrap z-50 shadow-xl">
                 Last sync: {lastRunLabel}
                 {pipelineStatus?.new_records ? (
-                  <span className="ml-1 text-emerald-400">
+                  <span className="ml-1 text-emerald-500">
                     (+{pipelineStatus.new_records.toLocaleString()} records)
                   </span>
                 ) : null}
@@ -147,56 +189,63 @@ export default function Header() {
             )}
           </div>
 
-          {/* Date — hidden on mobile */}
-          <span className="text-xs text-slate-500 font-mono block sm:inline">{date}</span>
+          {/* Date */}
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">{date}</span>
 
-          {/* Mobile overflow menu button */}
+          {/* Mobile menu */}
           <button
             onClick={() => setMenuOpen(o => !o)}
-            className="md:hidden flex flex-col gap-1 p-2 rounded hover:bg-slate-800"
+            className="md:hidden p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Menu"
           >
-            <span className="">
-              <Download size={14} />
-            </span>
+            <Download size={14} className="text-slate-500" />
           </button>
         </div>
       </div>
 
-      {/* ── Pipeline status bar — shown below main bar when data changed ── */}
+      {/* Pipeline status bar */}
       <PipelineStatusBar />
 
-      {/* ── Mobile dropdown menu ─────────────────────────────────────────── */}
+      {/* Mobile dropdown */}
       {menuOpen && (
-        <div className="md:hidden border-t border-slate-700 bg-slate-900 px-4 py-3 space-y-2">
-          <div className="text-xs text-slate-500 font-mono hidden pb-1 border-b border-slate-800">
-            {date}
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-900 px-4 py-3 space-y-2">
+          <div className="flex gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <Link href="/" onClick={() => setMenuOpen(false)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded text-sm flex-1 justify-center border transition-colors ${
+                activePage === "dashboard"
+                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+              }`}>
+              <Map size={14} /> Map
+            </Link>
+            <Link href="/heatmap" onClick={() => setMenuOpen(false)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded text-sm flex-1 justify-center border transition-colors ${
+                activePage === "heatmap"
+                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+              }`}>
+              <LayoutGrid size={14} /> Heatmap
+            </Link>
           </div>
-
-          <button
-            onClick={() => { downloadReport(); setMenuOpen(false); }}
-            disabled={loading}
+          <button onClick={() => { downloadReport(); setMenuOpen(false) }} disabled={loading}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm
-                       bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700
-                       disabled:opacity-50 transition-colors text-left"
-          >
-            <FileText size={10}/>
+                       bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700
+                       text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700
+                       disabled:opacity-50 transition-colors text-left">
+            <FileText size={14} />
             {loading ? "Generating PDF…" : "Export Situation Report (PDF)"}
           </button>
-
-          <button
-            onClick={() => { downloadExcel(); setMenuOpen(false); }}
+          <button onClick={() => { downloadExcel(); setMenuOpen(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm
-                       bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700
-                       transition-colors text-left"
-          >
-            <span className="text-base">
-              <Sheet size={10}/>
-            </span>
+                       bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700
+                       text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700
+                       transition-colors text-left">
+            <Sheet size={14} />
             Export Data (Excel)
           </button>
         </div>
       )}
     </header>
-  );
+  )
 }

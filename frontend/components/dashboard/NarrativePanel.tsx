@@ -5,7 +5,6 @@ import { useEffect, useState } from "react"
 const narrativeCache = new Map<string, NarrativeData>()
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-
 interface NarrativeParagraphs {
   opening: string
   commodities: string
@@ -27,12 +26,12 @@ interface NarrativeData {
   source: "gemini" | "template"
 }
 
-const TIER_COLORS: Record<string, { border: string; label: string; bg: string }> = {
-  critical: { border: "#B71C1C", label: "Critical", bg: "#FCEBEB" },
-  high:     { border: "#E65100", label: "High",     bg: "#FFF3E0" },
-  moderate: { border: "#F9A825", label: "Moderate", bg: "#FAEEDA" },
-  low:      { border: "#1565C0", label: "Low",      bg: "#E6F1FB" },
-  stable:   { border: "#2E7D32", label: "Stable",   bg: "#EAF3DE" },
+const TIER_COLORS: Record<string, { border: string; label: string; bg: string; darkBg: string; darkColor: string }> = {
+  critical: { border: "#B71C1C", label: "Critical", bg: "#FCEBEB", darkBg: "#3B0A0A", darkColor: "#FCA5A5" },
+  high:     { border: "#E65100", label: "High",     bg: "#FFF3E0", darkBg: "#3B1A00", darkColor: "#FDBA74" },
+  moderate: { border: "#F9A825", label: "Moderate", bg: "#FAEEDA", darkBg: "#3B2800", darkColor: "#FCD34D" },
+  low:      { border: "#1565C0", label: "Low",      bg: "#E6F1FB", darkBg: "#0A1F3B", darkColor: "#93C5FD" },
+  stable:   { border: "#2E7D32", label: "Stable",   bg: "#EAF3DE", darkBg: "#0A2B0C", darkColor: "#86EFAC" },
 }
 
 const SECTION_COLORS: Record<string, string> = {
@@ -52,11 +51,7 @@ const SECTION_LABELS: Record<string, string> = {
 }
 
 const SECTION_ORDER = [
-  "opening",
-  "commodity",
-  "monitoring",
-  "seasonal",
-  "recommendations",
+  "opening", "commodity", "monitoring", "seasonal", "recommendations",
 ]
 
 export default function NarrativePanel({ districtName }: { districtName: string }) {
@@ -66,32 +61,16 @@ export default function NarrativePanel({ districtName }: { districtName: string 
   const [copied, setCopied]   = useState(false)
 
   useEffect(() => {
-  if (!districtName) return
-
-  // Check cache first
-  const cached = narrativeCache.get(districtName)
-  if (cached) {
-    setData(cached)
-    setLoading(false)
-    return
-  }
-
-  setLoading(true)
-  setData(null)
-  setError("")
-
-  fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
-    .then(r => {
-      if (!r.ok) throw new Error(`API error: ${r.status}`)
-      return r.json()
-    })
-    .then((d: NarrativeData) => {
-      narrativeCache.set(districtName, d)  // Store in cache
-      setData(d)
-    })
-    .catch(e => setError(e.message))
-    .finally(() => setLoading(false))
-}, [districtName])
+    if (!districtName) return
+    const cached = narrativeCache.get(districtName)
+    if (cached) { setData(cached); setLoading(false); return }
+    setLoading(true); setData(null); setError("")
+    fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
+      .then(r => { if (!r.ok) throw new Error(`API error: ${r.status}`); return r.json() })
+      .then((d: NarrativeData) => { narrativeCache.set(districtName, d); setData(d) })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [districtName])
 
   function copyNarrative() {
     if (!data?.narrative) return
@@ -101,34 +80,26 @@ export default function NarrativePanel({ districtName }: { districtName: string 
     })
   }
 
-  const tier = data?.risk_tier
-    ? (TIER_COLORS[data.risk_tier] ?? TIER_COLORS.stable)
-    : null
+  const tier = data?.risk_tier ? (TIER_COLORS[data.risk_tier] ?? TIER_COLORS.stable) : null
 
   return (
     <div className="flex flex-col h-full">
 
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
+      <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <div>
-          <span className="text-xs font-mono uppercase tracking-widest text-slate-400">
+          <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-slate-400">
             Situation Report
           </span>
           {data?.national_rank && (
-            <span className="ml-2 text-xs text-slate-500">
+            <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
               #{data.national_rank} nationally
             </span>
           )}
         </div>
         {tier && (
-          <span style={{
-            background: tier.bg,
-            color: tier.border,
-            fontSize: 10,
-            fontWeight: 500,
-            padding: "2px 6px",
-            borderRadius: 4,
-          }}>
+          <span className="text-xs font-medium px-2 py-0.5 rounded"
+            style={{ background: tier.bg, color: tier.border }}>
             {tier.label}
           </span>
         )}
@@ -139,26 +110,26 @@ export default function NarrativePanel({ districtName }: { districtName: string 
 
         {/* Loading */}
         {loading && (
-        <div className="p-3 space-y-2">
-            <div className="text-slate-500 text-xs animate-pulse">
-            Generating narrative...
+          <div className="p-3 space-y-2">
+            <div className="text-slate-400 dark:text-slate-500 text-xs animate-pulse">
+              Generating narrative...
             </div>
-            <div className="text-slate-600 text-xs">
-            Fetching district data from database
+            <div className="text-slate-400 dark:text-slate-600 text-xs">
+              Fetching district data from database
             </div>
-            {/* Skeleton lines */}
             <div className="space-y-2 mt-3">
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-slate-800 rounded animate-pulse"
-                style={{ height: 8, width: `${70 + Math.random() * 30}%` }} />
-            ))}
+              {[...Array(5)].map((_, i) => (
+                <div key={i}
+                  className="bg-slate-200 dark:bg-slate-800 rounded animate-pulse"
+                  style={{ height: 8, width: `${70 + Math.random() * 30}%` }} />
+              ))}
             </div>
-        </div>
+          </div>
         )}
 
         {/* Error */}
         {!loading && error && (
-          <div className="p-3 text-red-400 text-xs">
+          <div className="p-3 text-red-500 dark:text-red-400 text-xs">
             Failed to load narrative: {error}
           </div>
         )}
@@ -166,26 +137,21 @@ export default function NarrativePanel({ districtName }: { districtName: string 
         {/* Content */}
         {!loading && !error && data && (
           <>
-            {/* District info */}
-            <div className="px-3 py-2 border-b border-slate-800">
-              <p className="text-xs font-medium text-slate-200">{data.district}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{data.region}</p>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Generated {data.generated_at}
-              </p>
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-xs md:text-lg font-bold text-slate-900 dark:text-slate-200">{data.district}</p>
+              <p className="text-xs text-slate-800 mt-0.5">{data.region}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-600 mt-0.5">Generated {data.generated_at}</p>
             </div>
 
-            {/* Narrative sections */}
             <div className="px-3 py-2 space-y-3">
               {data.source === "gemini" ? (
-                // Gemini: render as flowing paragraphs
                 (data.narrative || "").split("\n\n").filter(Boolean).map((para, i) => (
-                  <p key={i} style={{ fontSize: 11, lineHeight: 1.7, color: "#CBD5E1" }}>
+                  <p key={i} className="text-slate-800 dark:text-slate-300"
+                    style={{ fontSize: 12, lineHeight: 1.7 }}>
                     {para}
                   </p>
                 ))
               ) : (
-                // Template fallback: render labeled sections
                 SECTION_ORDER.map(key => {
                   const text = data.paragraphs?.[key as keyof NarrativeParagraphs]
                   if (!text) return null
@@ -197,7 +163,8 @@ export default function NarrativePanel({ districtName }: { districtName: string 
                                   letterSpacing: "0.06em", color: "#64748B", marginBottom: 3 }}>
                         {label}
                       </p>
-                      <p style={{ fontSize: 11, lineHeight: 1.6, color: "#CBD5E1" }}>
+                      <p className="text-slate-600 dark:text-slate-300"
+                        style={{ fontSize: 11, lineHeight: 1.6 }}>
                         {text}
                       </p>
                     </div>
@@ -205,47 +172,24 @@ export default function NarrativePanel({ districtName }: { districtName: string 
                 })
               )}
             </div>
-
-            {/* {data.source === "template" && (
-              <button
-                onClick={() => {
-                  narrativeCache.delete(districtName)
-                  setData(null)
-                  setLoading(true)
-                  fetch(`${API}/api/narrative/${encodeURIComponent(districtName)}`)
-                    .then(r => r.json())
-                    .then((d: NarrativeData) => {
-                      if (d.source === "gemini") narrativeCache.set(districtName, d)
-                      setData(d)
-                    })
-                    .catch(e => setError(e.message))
-                    .finally(() => setLoading(false))
-                }}
-                className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-700 text-slate-500 hover:bg-slate-800 transition-colors mt-2"
-              >
-                ↺ Retry with AI
-              </button>
-            )} */}
           </>
         )}
       </div>
 
       {/* Copy button */}
       {data?.narrative && (
-        <div className="px-3 py-2 border-t border-slate-700">
+        <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-700">
           <button
             onClick={copyNarrative}
-            className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded
+                       border border-slate-300 dark:border-slate-600
+                       text-slate-600 dark:text-slate-300
+                       hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
-            {copied ? (
-              <span>✓ Copied to clipboard</span>
-            ) : (
-              <span>⎘ Copy narrative for report</span>
-            )}
+            {copied ? <span>✓ Copied to clipboard</span> : <span>⎘ Copy narrative for report</span>}
           </button>
         </div>
       )}
-
     </div>
   )
 }

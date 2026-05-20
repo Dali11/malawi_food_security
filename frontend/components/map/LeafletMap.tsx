@@ -17,6 +17,9 @@ import {
   getDistricts, getMarkets, getSpikes,
   getRiskColor, getSeverityColor, getDistrict
 } from "@/lib/api"
+import { useTheme } from "@/components/ThemeProvider"
+
+
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -70,6 +73,7 @@ export default function LeafletMap({
   const [markets,   setMarkets  ] = useState<MarketCollection   | null>(null)
   const [spikes,    setSpikes   ] = useState<SpikeCollection    | null>(null)
   const [loading,   setLoading  ] = useState(true)
+  const { theme } = useTheme()
 
   useEffect(() => {
     async function loadBase() {
@@ -95,10 +99,9 @@ export default function LeafletMap({
     const score = feature?.properties?.risk_score ?? 0
     return {
       fillColor  : getRiskColor(score),
-      fillOpacity: 0.45,
-      color      : "#ffffff",
+      fillOpacity: 0.75,
+      color      : "#ebe4e4",
       weight     : 1.2,
-      opacity    : 0.8,
     }
   }
 
@@ -109,7 +112,7 @@ export default function LeafletMap({
         const l = e.target as L.Path
         l.setStyle({
           fillColor  : getRiskColor(p.risk_score),
-          fillOpacity: 0.65,
+          fillOpacity: 0.4,
           weight     : 2.5,
         })
       },
@@ -134,8 +137,8 @@ export default function LeafletMap({
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-900">
-        <p className="text-slate-400 font-mono text-sm animate-pulse">
+      <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+        <p className="text-slate-500 dark:text-slate-400 font-mono text-sm animate-pulse">
           Loading spatial layers...
         </p>
       </div>
@@ -147,11 +150,11 @@ export default function LeafletMap({
       bounds={MALAWI_BOUNDS}
       boundsOptions={{ padding: [10, 10] }}
       className="w-full h-full"
-      zoomControl={false}         /* ← disabled here, added by ResponsiveZoomControl */
+      zoomControl={false}      
     >
       <TileLayer
-        key={basemap.url}
-        url={basemap.url}
+        key={`${basemap.name}-${theme}`}
+        url={theme === "dark" ? basemap.urlDark : basemap.urlLight}
         attribution={`&copy; ${basemap.attr}`}
       />
       <FitMalawi />

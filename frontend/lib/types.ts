@@ -12,7 +12,8 @@ export interface GeoJSONPolygon {
 // ── Base Map─────────────────────────────────────────
 export interface BasemapConfig {
   name : string
-  url  : string
+  urlDark: string
+  urlLight: string
   attr : string
 }
 
