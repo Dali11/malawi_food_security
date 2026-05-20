@@ -5,7 +5,7 @@ import ForecastDrawer from "./ForecastDrawer"
 import NarrativePanel from "./NarrativePanel"
 import { DistrictDetail } from "@/lib/types"
 
-type MobileTab = "stats" | "report" | "forecast"
+type MobileTab = "stats" | "forecast" | "report"
 
 export function MobileDrawer({
   district,
@@ -42,8 +42,9 @@ export function MobileDrawer({
 
   const TABS: { id: MobileTab; label: string }[] = [
     { id: "stats",    label: "Stats"      },
-    { id: "report",   label: "AI Report"  },
-    { id: "forecast", label: "⚡ Forecast" },
+    { id: "forecast", label: "Forecast" },
+    { id: "report",   label: "Generate Report"  },
+    
   ]
 
   return (
@@ -82,7 +83,7 @@ export function MobileDrawer({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-2.5 text-xs font-bold border-b-2 transition-colors ${
               activeTab === tab.id
                 ? "border-yellow-500 text-yellow-400"
                 : "border-transparent text-slate-500 hover:text-slate-300"

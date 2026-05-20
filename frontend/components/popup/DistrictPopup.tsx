@@ -34,7 +34,7 @@ export default function DistrictPopup({ district, onClose, onForecastOpen }: Dis
 
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 sticky top-0 bg-slate-900 z-10">
+      <div className="hidden sm:block flex items-center justify-between px-4 py-3 border-b border-slate-700 sticky top-0 bg-slate-900 z-10">
         <div>
           <div className="font-bold text-slate-100">{district.district}</div>
           <div className="text-xs text-slate-400">{district.region}</div>
@@ -99,7 +99,7 @@ export default function DistrictPopup({ district, onClose, onForecastOpen }: Dis
                     rounded border border-yellow-600/50 text-yellow-400
                     hover:bg-yellow-500/10 transition-colors font-medium"
         >
-          ⚡ View 3-month price forecast
+         View 3-month price forecast
         </button>
       </div>
 
