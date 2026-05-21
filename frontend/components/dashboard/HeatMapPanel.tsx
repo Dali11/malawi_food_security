@@ -83,9 +83,6 @@ function DistrictCard({
 }) {
   const rl    = riskLabel(d.risk_score)
   const badge = RISK_BADGE[rl] ?? RISK_BADGE.Stable
-  const [expanded, setExpanded] = useState(false)
-
-  const shown = expanded ? displayedCommodities : displayedCommodities.slice(0, 3)
 
   return (
     <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-white dark:bg-slate-900">
@@ -101,9 +98,9 @@ function DistrictCard({
         </div>
       </div>
 
-      {/* Commodity grid */}
+      {/* Commodity grid — always show all */}
       <div className="grid grid-cols-2 gap-1.5">
-        {shown.map(c => {
+        {displayedCommodities.map(c => {
           const cell = d.commodities[c]
           const sev  = (cell?.spike_severity ?? "nodata") as Severity
           const s    = CELL_STYLES[sev]
@@ -127,15 +124,6 @@ function DistrictCard({
           )
         })}
       </div>
-
-      {displayedCommodities.length > 3 && (
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="mt-2 text-[10px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"
-        >
-          {expanded ? "Show less ▲" : `+${displayedCommodities.length - 3} more ▼`}
-        </button>
-      )}
     </div>
   )
 }
@@ -150,6 +138,7 @@ export default function HeatmapPanel() {
   const [sortMode,  setSortMode ] = useState<SortMode>("price")
   const [filter,    setFilter   ] = useState<Filter>("All")
   const [activeCom, setActiveCom] = useState<string | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const { theme } = useTheme()
   const toolbarScrollRef = useRef<HTMLDivElement>(null)
 
@@ -224,7 +213,35 @@ export default function HeatmapPanel() {
     <div className="h-full flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
 
       {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-2 sm:p-3 flex-shrink-0">
+
+      {/* Mobile: collapsed by default */}
+      <div className="md:hidden flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => setSummaryOpen(v => !v)}
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+        >
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Overview</span>
+          <span className="flex items-center gap-2 text-[10px] font-mono">
+            {!summaryOpen && (
+              <span className="text-slate-400 dark:text-slate-600">
+                {s.total_districts} districts · {s.critical_cells} critical
+              </span>
+            )}
+            <span className="text-slate-400">{summaryOpen ? "▲ Hide" : "▼ Show"}</span>
+          </span>
+        </button>
+        {summaryOpen && (
+          <div className="grid grid-cols-2 gap-2 p-2 border-t border-slate-100 dark:border-slate-800/60">
+            <SummaryCard label="Districts monitored" value={s.total_districts} sub="all regions" />
+            <SummaryCard label="Critical cells" value={s.critical_cells} sub="district × commodity pairs" valueClass="text-red-600 dark:text-red-400" />
+            <SummaryCard label="Worst commodity" value={s.worst_commodity ?? "—"} sub={`${s.worst_commodity_critical_districts} districts critical`} valueClass="text-orange-600 dark:text-orange-400" />
+            <SummaryCard label="Most affected" value={s.most_affected_district ?? "—"} sub={`${s.most_affected_spike_count} commodities spiking`} valueClass="text-amber-600 dark:text-amber-400" />
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: always visible */}
+      <div className="hidden md:grid md:grid-cols-4 gap-2 p-3 flex-shrink-0">
         <SummaryCard label="Districts monitored" value={s.total_districts} sub="all regions" />
         <SummaryCard label="Critical cells" value={s.critical_cells} sub="district × commodity pairs" valueClass="text-red-600 dark:text-red-400" />
         <SummaryCard label="Worst commodity" value={s.worst_commodity ?? "—"} sub={`${s.worst_commodity_critical_districts} districts critical`} valueClass="text-orange-600 dark:text-orange-400" />
