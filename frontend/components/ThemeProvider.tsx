@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function toggle() {
     const current = document.documentElement.classList.contains("dark") ? "dark" : "light"
-    const next = current === "dark" ? "light" : "dark"
+    const next = current === "light" ? "dark" : "light"
     localStorage.setItem("mfs-theme", next)
     document.documentElement.classList.toggle("dark", next === "dark")
     setTheme(next)
