@@ -209,7 +209,7 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
               <MoreHorizontal size={14} className="text-slate-500 dark:text-slate-400" />
             </button>
             {menuOpen && (
-              <div className="absolute top-full right-0 mt-1.5 w-52 z-50
+              <div className="absolute top-full right-0 mt-1.5 w-52 z-[2000]
                               bg-white dark:bg-slate-800
                               border border-slate-200 dark:border-slate-700
                               rounded-lg shadow-xl overflow-hidden">
