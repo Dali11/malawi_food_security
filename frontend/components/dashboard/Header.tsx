@@ -146,14 +146,14 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
                          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
                          text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
                          disabled:opacity-50 transition-colors">
-              {loading ? "Generating…" : "⬇ Export Report"}
+              {loading ? "Generating…" : "Export Report"}
             </button>
             <button onClick={downloadExcel}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
                          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
                          text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
                          transition-colors">
-              ⬇ Export Excel
+              Export Excel
             </button>
           </div>
 
