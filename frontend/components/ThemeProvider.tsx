@@ -1,29 +1,29 @@
 "use client"
 import { createContext, useContext, useEffect, useState } from "react"
 
-type Theme = "light" | "dark"
+type Theme = "dark" | "light"
 
 const ThemeContext = createContext<{
   theme  : Theme
   toggle : () => void
-}>({ theme: "light", toggle: () => {} })
+}>({ theme: "dark", toggle: () => {} })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light")
+  const [theme, setTheme] = useState<Theme>("dark")
 
   // On mount — read saved preference
   useEffect(() => {
     const saved = localStorage.getItem("mfs-theme") as Theme | null
-    const preferred = saved ?? "light"
+    const preferred = saved ?? "dark"
     setTheme(preferred)
-    document.documentElement.classList.toggle("light", preferred === "light")
+    document.documentElement.classList.toggle("dark", preferred === "dark")
   }, [])
 
   function toggle() {
-    const current = document.documentElement.classList.contains("light") ? "light" : "dark"
+    const current = document.documentElement.classList.contains("dark") ? "dark" : "light"
     const next = current === "light" ? "dark" : "light"
     localStorage.setItem("mfs-theme", next)
-    document.documentElement.classList.toggle("light", next === "light")
+    document.documentElement.classList.toggle("dark", next === "dark")
     setTheme(next)
   }
 
