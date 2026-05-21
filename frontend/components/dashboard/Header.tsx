@@ -1,32 +1,54 @@
 "use client"
-import { Download, FileText, Sheet, Sun, Moon, LayoutGrid, Map } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Download, FileText, Sheet, Sun, Moon, LayoutGrid, Map, MoreHorizontal, AlertTriangle } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useTheme } from "@/components/ThemeProvider"
+import { useSummary } from "@/lib/hooks/useSummary"
 import { usePipelineStatus } from "@/lib/hooks/usepipelineStatus"
 import PipelineStatusBar from "./Pipelinestatusbar"
-import { useTheme } from "../ThemeProvider"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface HeaderProps {
-  activePage?: "dashboard" | "heatmap"
+  activePage?        : "dashboard" | "heatmap" | "season" | "indicators"
+  onOpenAlertSidebar?: () => void
 }
 
-export default function Header({ activePage = "dashboard" }: HeaderProps) {
-  const [date, setDate]         = useState("")
-  const [loading, setLoading]   = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const { theme, toggle }       = useTheme()
-  const { status: pipelineStatus } = usePipelineStatus()
+const TABS = [
+  { id: "dashboard",  label: "Dashboard",       href: "/",            icon: "⊞" },
+  { id: "heatmap",    label: "Heatmap",          href: "/heatmap",     icon: "⊟" },
+  { id: "season",     label: "Season baseline",  href: "/season",      icon: "⌘" },
+  { id: "indicators", label: "Indicators",       href: "/indicators",  icon: "⌁" },
+]
+
+export default function Header({ activePage = "dashboard", onOpenAlertSidebar }: HeaderProps) {
+  const [date, setDate]           = useState("")
+  const [loading, setLoading]     = useState(false)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const { theme, toggle }         = useTheme()
+  const { status: pipelineStatus} = usePipelineStatus()
+  const { summary }               = useSummary()
+  const menuRef                   = useRef<HTMLDivElement>(null)
+  const criticalCount             = summary?.spike_events?.critical ?? 0
 
   useEffect(() => {
-    const format = () =>
-      new Date().toLocaleDateString("en-GB", {
-        day: "2-digit", month: "short", year: "numeric",
-      })
+    const format = () => new Date().toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+    })
     setDate(format())
     const timer = setInterval(() => setDate(format()), 60_000)
     return () => clearInterval(timer)
+  }, [])
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
   const downloadReport = async () => {
@@ -73,76 +95,73 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
   return (
     <header className="bg-white dark:bg-slate-900
                        border-b border-slate-200 dark:border-slate-700
-                       flex-shrink-0">
+                       flex-shrink-0 flex flex-col">
 
-      {/* Main bar */}
-      <div className="flex items-center justify-between px-3 md:px-4 h-12">
-
-        {/* Left — title + nav */}
-        <div className="flex items-center gap-4 min-w-0">
-          <span className="font-bold text-slate-900 dark:text-slate-100 tracking-wide md:text-lg whitespace-nowrap">
-            Malawi Food Price Intelligence
+      {/* ── STATUS BAR (mobile only) ──────────────────────────────────────── */}
+      <div className="flex md:hidden items-center justify-between
+                      px-3 py-1.5
+                      bg-slate-50 dark:bg-slate-950
+                      border-b border-slate-200 dark:border-slate-800">
+        {/* Left — live + date */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+              Live
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+            {date}
           </span>
+        </div>
 
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-2 ml-10">
-            <Link
-              href="/"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-mono transition-colors ${
-                activePage === "dashboard"
-                  ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              }`}
-            >
-              <Map size={12} /> Dashboard
-            </Link>
-            <Link
-              href="/heatmap"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-mono transition-colors ${
-                activePage === "heatmap"
-                  ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-500"
-              }`}
-            >
-              <LayoutGrid size={12} /> Heatmap
-            </Link>
-          </nav>
+        {/* Right — critical badge */}
+        {criticalCount > 0 && (
+          <button
+            onClick={onOpenAlertSidebar}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full
+                       bg-red-50 dark:bg-red-950/60
+                       border border-red-200 dark:border-red-800/50
+                       text-red-600 dark:text-red-400 text-[10px] font-mono font-medium"
+          >
+            <AlertTriangle size={9} />
+            {criticalCount} critical
+          </button>
+        )}
+      </div>
+
+      {/* ── TITLE BAR ────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-3 md:px-4 h-11">
+
+        {/* Left — title */}
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 hidden md:block">
+            FOOD PRICE INTELLIGENCE
+          </span>
+          <span className="hidden md:block text-slate-300 dark:text-slate-600 mx-1">·</span>
+          <span className="font-bold text-slate-900 dark:text-slate-100 tracking-wide text-sm">
+            Malawi
+          </span>
         </div>
 
         {/* Right — actions */}
-        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-1.5">
 
-          {/* Export buttons */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Desktop export buttons */}
+          <div className="hidden md:flex items-center gap-2 mr-2">
             <button
               onClick={downloadReport}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
                          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
                          text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
-                         disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                         disabled:opacity-50 transition-colors"
             >
-              {loading ? (
-                <>
-                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 12l-4-4h2.5V4h3v4H12L8 12z"/>
-                    <path d="M2 13h12v1.5H2z"/>
-                  </svg>
-                  Export Report
-                </>
-              )}
+              {loading ? "Generating…" : "⬇ Export Report"}
             </button>
             <button
               onClick={downloadExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold
                          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
                          text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600
                          transition-colors"
@@ -151,27 +170,11 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
             </button>
           </div>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggle}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="p-1.5 rounded border transition-colors
-                       border-slate-200 dark:border-slate-700
-                       hover:bg-slate-100 dark:hover:bg-slate-800 ml-5"
-          >
-            {theme === "dark"
-              ? <Sun  size={14} className="text-amber-400" />
-              : <Moon size={14} className="text-slate-500" />
-            }
-          </button>
-
-          {/* Live indicator */}
-          <div
-            className="flex items-center gap-1.5 group relative cursor-default"
-            title={lastRunLabel ? `Last updated: ${lastRunLabel}` : "Live monitoring active"}
-          >
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden sm:inline">
+          {/* Desktop live indicator */}
+          <div className="hidden md:flex items-center gap-1.5 group relative cursor-default"
+            title={lastRunLabel ? `Last updated: ${lastRunLabel}` : "Live monitoring active"}>
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
               Live
             </span>
             {lastRunLabel && (
@@ -189,63 +192,117 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
             )}
           </div>
 
-          {/* Date */}
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">{date}</span>
+          {/* Desktop date */}
+          <span className="hidden md:block text-xs text-slate-400 dark:text-slate-500 font-mono mx-1">
+            {date}
+          </span>
 
-          {/* Mobile menu */}
+          {/* Theme toggle — both mobile and desktop */}
           <button
-            onClick={() => setMenuOpen(o => !o)}
-            className="md:hidden p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-            aria-label="Menu"
+            onClick={toggle}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="p-1.5 rounded border transition-colors
+                       border-slate-200 dark:border-slate-700
+                       hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Download size={14} className="text-slate-500" />
+            {theme === "dark"
+              ? <Sun  size={14} className="text-amber-400" />
+              : <Moon size={14} className="text-slate-500" />
+            }
           </button>
+
+          {/* Mobile overflow menu */}
+          <div className="relative md:hidden" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              className="p-1.5 rounded border transition-colors
+                         border-slate-200 dark:border-slate-700
+                         hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <MoreHorizontal size={14} className="text-slate-500 dark:text-slate-400" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute top-full right-0 mt-1.5 w-52 z-50
+                              bg-white dark:bg-slate-800
+                              border border-slate-200 dark:border-slate-700
+                              rounded-lg shadow-xl overflow-hidden">
+                <button
+                  onClick={() => { downloadReport(); setMenuOpen(false) }}
+                  disabled={loading}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm
+                             text-slate-700 dark:text-slate-200
+                             hover:bg-slate-50 dark:hover:bg-slate-700
+                             disabled:opacity-50 transition-colors text-left"
+                >
+                  <FileText size={14} className="text-slate-400" />
+                  {loading ? "Generating…" : "Export Situation Report"}
+                </button>
+                <div className="border-t border-slate-100 dark:border-slate-700" />
+                <button
+                  onClick={() => { downloadExcel(); setMenuOpen(false) }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm
+                             text-slate-700 dark:text-slate-200
+                             hover:bg-slate-50 dark:hover:bg-slate-700
+                             transition-colors text-left"
+                >
+                  <Sheet size={14} className="text-slate-400" />
+                  Export Data (Excel)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Pipeline status bar */}
+      {/* ── PIPELINE STATUS BAR ───────────────────────────────────────────── */}
       <PipelineStatusBar />
 
-      {/* Mobile dropdown */}
-      {menuOpen && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-700
-                        bg-white dark:bg-slate-900 px-4 py-3 space-y-2">
-          <div className="flex gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-            <Link href="/" onClick={() => setMenuOpen(false)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded text-sm flex-1 justify-center border transition-colors ${
-                activePage === "dashboard"
-                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
-                  : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
-              }`}>
-              <Map size={14} /> Map
-            </Link>
-            <Link href="/heatmap" onClick={() => setMenuOpen(false)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded text-sm flex-1 justify-center border transition-colors ${
-                activePage === "heatmap"
-                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
-                  : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
-              }`}>
-              <LayoutGrid size={14} /> Heatmap
-            </Link>
+      {/* ── TAB ROW (mobile = scrollable, desktop = nav links) ───────────── */}
+      <div className="border-t border-slate-100 dark:border-slate-800">
+
+        {/* Mobile — horizontally scrollable tabs with fade gradient */}
+        <div className="relative md:hidden">
+          <div className="flex overflow-x-auto scrollbar-none px-2 gap-0"
+               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            {TABS.map(tab => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-mono
+                            whitespace-nowrap flex-shrink-0 border-b-2 transition-colors ${
+                  activePage === tab.id
+                    ? "border-emerald-500 text-slate-900 dark:text-slate-100 font-semibold"
+                    : "border-transparent text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            ))}
           </div>
-          <button onClick={() => { downloadReport(); setMenuOpen(false) }} disabled={loading}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm
-                       bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700
-                       text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700
-                       disabled:opacity-50 transition-colors text-left">
-            <FileText size={14} />
-            {loading ? "Generating PDF…" : "Export Situation Report (PDF)"}
-          </button>
-          <button onClick={() => { downloadExcel(); setMenuOpen(false) }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm
-                       bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700
-                       text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700
-                       transition-colors text-left">
-            <Sheet size={14} />
-            Export Data (Excel)
-          </button>
+          {/* Right fade hint — shows more tabs exist */}
+          <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none
+                          bg-gradient-to-l from-white dark:from-slate-900 to-transparent" />
         </div>
-      )}
+
+        {/* Desktop — regular nav */}
+        <nav className="hidden md:flex items-center px-4 gap-0">
+          {TABS.map(tab => (
+            <Link
+              key={tab.id}
+              href={tab.href}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-mono
+                          border-b-2 transition-colors ${
+                activePage === tab.id
+                  ? "border-emerald-500 text-slate-900 dark:text-slate-100 font-semibold"
+                  : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
     </header>
   )
 }
