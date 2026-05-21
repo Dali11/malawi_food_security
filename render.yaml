@@ -1,0 +1,29 @@
+services:
+  # FastAPI Web Service
+  - type: web
+    name: malawi-food-api
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+
+  # Monday Pipeline Cron Job
+  - type: cron
+    name: malawi-pipeline-cron
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/update_pipeline.py
+    schedule: "0 6 * * 1"  # Every Monday at 6:00 AM UTC
+    plan: free
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

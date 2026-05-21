@@ -1,6 +1,6 @@
 "use client"
 import { CommodityCell, DistrictRow, useHeatmap } from "@/lib/hooks/useHeatMap"
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useRef } from "react"
 import { useTheme } from "../ThemeProvider"
 import { SummaryCard } from "@/lib/hooks/useHeatmapSummaryCard"
 
@@ -20,7 +20,6 @@ const CELL_STYLES: Record<Severity, { bg: string; text: string; pct: string }> =
   nodata:   { bg: "bg-slate-50   dark:bg-slate-900",     text: "text-slate-400  dark:text-slate-600",  pct: ""                                      },
 }
 
-// ── Risk badge — light + dark variants ──────────────────────────────────────
 const RISK_BADGE: Record<string, string> = {
   Critical: "bg-red-100    dark:bg-red-900/60    text-red-700    dark:text-red-300",
   High    : "bg-orange-100 dark:bg-orange-900/60 text-orange-700 dark:text-orange-300",
@@ -43,8 +42,8 @@ function Cell({ cell }: { cell: CommodityCell | undefined }) {
   if (!cell) {
     const s = CELL_STYLES.nodata
     return (
-      <td className="px-1 py-0.5">
-        <div className={`${s.bg} rounded px-1 py-1.5 text-center`}>
+      <td className="px-0.5 sm:px-1 py-0.5">
+        <div className={`${s.bg} rounded px-0.5 sm:px-1 py-1.5 text-center min-w-[52px]`}>
           <span className={`block text-xs ${s.text}`}>—</span>
         </div>
       </td>
@@ -56,8 +55,8 @@ function Cell({ cell }: { cell: CommodityCell | undefined }) {
   const pct = cell.pct_change
 
   return (
-    <td className="px-1 py-0.5">
-      <div className={`${s.bg} rounded px-1 py-1.5 text-center`}>
+    <td className="px-0.5 sm:px-1 py-0.5">
+      <div className={`${s.bg} rounded px-0.5 sm:px-1 py-1.5 text-center min-w-[52px]`}>
         <span className={`block text-xs font-mono font-medium ${s.text}`}>
           {cell.price.toLocaleString()}
         </span>
@@ -68,6 +67,76 @@ function Cell({ cell }: { cell: CommodityCell | undefined }) {
         )}
       </div>
     </td>
+  )
+}
+
+// ── Mobile district card ──────────────────────────────────────────────────────
+
+function DistrictCard({
+  d,
+  displayedCommodities,
+  data,
+}: {
+  d: DistrictRow
+  displayedCommodities: string[]
+  data: NonNullable<ReturnType<typeof useHeatmap>["data"]>
+}) {
+  const rl    = riskLabel(d.risk_score)
+  const badge = RISK_BADGE[rl] ?? RISK_BADGE.Stable
+  const [expanded, setExpanded] = useState(false)
+
+  const shown = expanded ? displayedCommodities : displayedCommodities.slice(0, 3)
+
+  return (
+    <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-white dark:bg-slate-900">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="font-semibold text-sm text-slate-800 dark:text-slate-200">{d.district}</p>
+          <p className="text-[10px] font-mono text-slate-500">{d.region}</p>
+        </div>
+        <div className="text-right">
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${badge}`}>{rl}</span>
+          <p className="text-[9px] font-mono text-slate-400 dark:text-slate-600 mt-0.5">{d.risk_score.toFixed(0)}</p>
+        </div>
+      </div>
+
+      {/* Commodity grid */}
+      <div className="grid grid-cols-2 gap-1.5">
+        {shown.map(c => {
+          const cell = d.commodities[c]
+          const sev  = (cell?.spike_severity ?? "nodata") as Severity
+          const s    = CELL_STYLES[sev]
+          const shortName = c.replace(" (shelled)", "").replace(" (vegetable)", "")
+          return (
+            <div key={c} className={`${s.bg} rounded p-2`}>
+              <p className={`text-[9px] font-mono uppercase tracking-wide ${s.pct || "text-slate-400"}`}>{shortName}</p>
+              {cell ? (
+                <>
+                  <p className={`text-sm font-mono font-semibold ${s.text}`}>{cell.price.toLocaleString()}</p>
+                  {cell.pct_change != null && (
+                    <p className={`text-[9px] font-mono ${s.pct}`}>
+                      {cell.pct_change > 0 ? "+" : ""}{cell.pct_change.toFixed(0)}%
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className={`text-sm font-mono ${s.text}`}>—</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {displayedCommodities.length > 3 && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="mt-2 text-[10px] font-mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"
+        >
+          {expanded ? "Show less ▲" : `+${displayedCommodities.length - 3} more ▼`}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -82,6 +151,7 @@ export default function HeatmapPanel() {
   const [filter,    setFilter   ] = useState<Filter>("All")
   const [activeCom, setActiveCom] = useState<string | null>(null)
   const { theme } = useTheme()
+  const toolbarScrollRef = useRef<HTMLDivElement>(null)
 
   const commodities = data?.commodities ?? []
 
@@ -130,7 +200,7 @@ export default function HeatmapPanel() {
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
-        <div className="text-slate-500 dark:text-slate-400 text-sm font-mono animate-pulse">
+        <div className="text-slate-500 dark:text-slate-400 text-sm font-mono animate-pulse p-4">
           Loading heatmap data…
         </div>
       </div>
@@ -154,7 +224,7 @@ export default function HeatmapPanel() {
     <div className="h-full flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
 
       {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 flex-shrink-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-2 sm:p-3 flex-shrink-0">
         <SummaryCard label="Districts monitored" value={s.total_districts} sub="all regions" />
         <SummaryCard label="Critical cells" value={s.critical_cells} sub="district × commodity pairs" valueClass="text-red-600 dark:text-red-400" />
         <SummaryCard label="Worst commodity" value={s.worst_commodity ?? "—"} sub={`${s.worst_commodity_critical_districts} districts critical`} valueClass="text-orange-600 dark:text-orange-400" />
@@ -162,70 +232,104 @@ export default function HeatmapPanel() {
       </div>
 
       {/* ── Toolbar ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-3 pb-2 flex-wrap flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
-
-        <span className="text-slate-500 text-xs font-bold">SHOW:</span>
-        {(["All", "Critical", "Severe", "Moderate"] as Filter[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer ${
-              filter === f
-                ? "bg-emerald-700 border-emerald-600 text-emerald-100"
-                : "border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-400 hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
-
-        <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
-
-        <button
-          onClick={() => setActiveCom(null)}
-          className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer ${
-            !activeCom
-              ? "bg-slate-600 border-slate-500 text-white"
-              : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-500"
-          }`}
-        >
-          All commodities
-        </button>
-        {commodities.map(c => (
-          <button
-            key={c}
-            onClick={() => setActiveCom(activeCom === c ? null : c)}
-            className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer ${
-              activeCom === c
-                ? "bg-slate-600 border-slate-500 text-white"
-                : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:border-slate-500"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-slate-500 text-xs font-mono">SORT:</span>
-          {(["price", "risk", "region", "name"] as SortMode[]).map(m => (
+      <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
+        {/* Row 1: Show filters + Sort (on md+, all on one line) */}
+        <div className="flex items-center gap-2 px-2 sm:px-3 pt-2 pb-1 flex-wrap">
+          <span className="text-slate-500 text-xs font-bold">SHOW:</span>
+          {(["All", "Critical", "Severe", "Moderate"] as Filter[]).map(f => (
             <button
-              key={m}
-              onClick={() => setSortMode(m)}
-              className={`text-xs px-2 py-1 rounded border font-mono transition-colors ${
-                sortMode === m
-                  ? "bg-slate-200 dark:bg-slate-700 border-slate-400 dark:border-slate-500 text-slate-900 dark:text-slate-100"
-                  : "border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer ${
+                filter === f
+                  ? "bg-emerald-700 border-emerald-600 text-emerald-100"
+                  : "border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-400 hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              {m.charAt(0).toUpperCase() + m.slice(1)}
+              {f}
+            </button>
+          ))}
+
+          {/* Sort — pushed to right on md+, new row on mobile handled by flex-wrap */}
+          <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-slate-500 text-xs font-mono hidden sm:inline">SORT:</span>
+            {(["price", "risk", "region", "name"] as SortMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setSortMode(m)}
+                className={`text-xs px-2 py-1 rounded border font-mono transition-colors ${
+                  sortMode === m
+                    ? "bg-slate-200 dark:bg-slate-700 border-slate-400 dark:border-slate-500 text-slate-900 dark:text-slate-100"
+                    : "border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                }`}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Commodity pills — horizontally scrollable on mobile */}
+        <div
+          ref={toolbarScrollRef}
+          className="flex items-center gap-1.5 px-2 sm:px-3 pb-2 overflow-x-auto scrollbar-none"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <button
+            onClick={() => setActiveCom(null)}
+            className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer flex-shrink-0 ${
+              !activeCom
+                ? "bg-slate-600 border-slate-500 text-white"
+                : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-500"
+            }`}
+          >
+            All commodities
+          </button>
+          {commodities.map(c => (
+            <button
+              key={c}
+              onClick={() => setActiveCom(activeCom === c ? null : c)}
+              className={`text-xs px-2.5 py-1 rounded-full border font-mono transition-colors cursor-pointer flex-shrink-0 ${
+                activeCom === c
+                  ? "bg-slate-600 border-slate-500 text-white"
+                  : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:border-slate-500"
+              }`}
+            >
+              {c.replace(" (shelled)", "").replace(" (vegetable)", "")}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────────── */}
+      {/* ── Table (md+) / Card list (mobile) ──────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-auto">
-        <table className="w-full border-collapse text-xs" style={{ minWidth: "600px" }}>
+
+        {/* Mobile card view — hidden on md+ */}
+        <div className="md:hidden p-2 space-y-2">
+          {sortMode === "region" && regions
+            ? Array.from(regions.entries()).map(([region, regionRows]) => (
+                <React.Fragment key={region}>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 dark:text-slate-600 px-1 pt-2">
+                    {region} region
+                  </p>
+                  {regionRows.map(d => (
+                    <DistrictCard key={d.district} d={d} displayedCommodities={displayedCommodities} data={data} />
+                  ))}
+                </React.Fragment>
+              ))
+            : rows.map(d => (
+                <DistrictCard key={d.district} d={d} displayedCommodities={displayedCommodities} data={data} />
+              ))
+          }
+          {rows.length === 0 && (
+            <p className="text-center py-12 text-slate-500 font-mono text-xs">
+              No districts match the current filter
+            </p>
+          )}
+        </div>
+
+        {/* Desktop table view — hidden below md */}
+        <table className="hidden md:table w-full border-collapse text-xs" style={{ minWidth: "600px" }}>
           <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th className="text-left text-slate-600 dark:text-slate-500 font-mono text-[10px] uppercase tracking-wide
@@ -291,7 +395,7 @@ export default function HeatmapPanel() {
       </div>
 
       {/* ── Legend ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 px-3 py-2 border-t border-slate-200 dark:border-slate-800 flex-shrink-0 flex-wrap">
+      <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-3 py-2 border-t border-slate-200 dark:border-slate-800 flex-shrink-0 flex-wrap">
         {([
           ["Critical", "bg-red-100    dark:bg-red-950/60    border-red-300    dark:border-red-800/50",    "text-red-700    dark:text-red-300"   ],
           ["Severe",   "bg-orange-100 dark:bg-orange-950/60 border-orange-300 dark:border-orange-800/50", "text-orange-700 dark:text-orange-300"],
@@ -304,7 +408,7 @@ export default function HeatmapPanel() {
             <span className={`text-[10px] font-mono ${text}`}>{label}</span>
           </div>
         ))}
-        <span className="ml-auto text-[10px] font-mono text-slate-400 dark:text-slate-600">
+        <span className="hidden sm:inline ml-auto text-[10px] font-mono text-slate-400 dark:text-slate-600">
           Prices in MWK · Latest available data per district
         </span>
       </div>
@@ -312,7 +416,7 @@ export default function HeatmapPanel() {
   )
 }
 
-// ── District row ─────────────────────────────────────────────────────────────
+// ── District table row (desktop) ──────────────────────────────────────────────
 
 function DistrictTableRow({
   d,

@@ -29,7 +29,7 @@ async def get_heatmap():
 
         # Latest price + severity per district × commodity
         rows = await conn.fetch("""
-            WITH latest AS (
+            WITH latest_price AS (
                 SELECT DISTINCT ON (district, commodity)
                     district,
                     commodity,
@@ -43,24 +43,57 @@ async def get_heatmap():
                   AND unit IN ('KG', 'L')
                   AND price IS NOT NULL
                 ORDER BY district, commodity, date DESC
+            ),
+            worst_severity AS (
+                SELECT
+                    district,
+                    commodity,
+                    MAX(CASE spike_severity
+                        WHEN 'Critical' THEN 4
+                        WHEN 'Severe'   THEN 3
+                        WHEN 'Moderate' THEN 2
+                        WHEN 'Normal'   THEN 1
+                        ELSE 0 END)                         AS severity_rank,
+                    MAX(pct_change::numeric)                AS max_pct_change
+                FROM prices
+                WHERE commodity = ANY($1::text[])
+                  AND unit IN ('KG', 'L')
+                  AND date::date >= (NOW() - INTERVAL '6 months')::date
+                GROUP BY district, commodity
+            ),
+            severity_label AS (
+                SELECT
+                    district,
+                    commodity,
+                    max_pct_change,
+                    CASE severity_rank
+                        WHEN 4 THEN 'Critical'
+                        WHEN 3 THEN 'Severe'
+                        WHEN 2 THEN 'Moderate'
+                        WHEN 1 THEN 'Normal'
+                        ELSE 'Normal' END                   AS worst_severity
+                FROM worst_severity
             )
             SELECT
-                l.district,
-                l.commodity,
-                l.unit,
-                ROUND(l.price::numeric, 0)              AS price,
-                ROUND(l.pct_change::numeric, 1)         AS pct_change,
-                l.spike_severity,
-                l.date,
+                lp.district,
+                lp.commodity,
+                lp.unit,
+                ROUND(lp.price::numeric, 0)                AS price,
+                ROUND(sl.max_pct_change::numeric, 1)       AS pct_change,
+                COALESCE(sl.worst_severity, lp.spike_severity, 'Normal') AS spike_severity,
+                lp.date,
                 dr.region,
                 dr.risk_score,
                 dr.critical_count,
                 dr.severe_count,
                 dr.moderate_count
-            FROM latest l
+            FROM latest_price lp
+            LEFT JOIN severity_label sl
+                ON LOWER(sl.district) = LOWER(lp.district)
+               AND sl.commodity = lp.commodity
             LEFT JOIN districts_risk dr
-                ON LOWER(dr.name_1) = LOWER(l.district)
-            ORDER BY dr.risk_score DESC NULLS LAST, l.district, l.commodity
+                ON LOWER(dr.name_1) = LOWER(lp.district)
+            ORDER BY dr.risk_score DESC NULLS LAST, lp.district, lp.commodity
         """, COMMODITIES)
 
         # District metadata (risk score, region) for all 28
@@ -108,11 +141,7 @@ async def get_heatmap():
         }
 
     # Summary stats
-    all_cells = [
-        cell
-        for d in district_map.values()
-        for cell in d["commodities"].values()
-    ]
+    all_cells       = [c for d in district_map.values() for c in d["commodities"].values()]
     critical_cells  = [c for c in all_cells if c["spike_severity"] == "Critical"]
     severe_cells    = [c for c in all_cells if c["spike_severity"] == "Severe"]
 
