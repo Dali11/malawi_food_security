@@ -1,317 +1,90 @@
-"use client"
+import { riskColor } from "@/lib/hooks/useColor"
+import { ForecastData } from "@/lib/types"
 
-import React, { useState, useEffect } from "react"
-import MapContainer   from "@/components/map/MapContainer"
-import DistrictPopup  from "@/components/popup/DistrictPopup"
-import StatsPanel     from "@/components/dashboard/StatsPanel"
-import AlertPanel     from "@/components/dashboard/AlertPanel"
-import NarrativePanel from "@/components/dashboard/NarrativePanel"
-import ForecastDrawer from "@/components/dashboard/ForecastDrawer"
-import type { DistrictDetail } from "@/lib/types"
-import MapLegend from "../map/MapLegend"
-import { BASEMAPS } from "@/lib/constants"
-import { MobileDrawer } from "./MobileDrawer"
-import { MobileSidebar } from "./MobileSidebar"
+export function ForecastChart({ data }: { data: ForecastData }) {
+  const maxPrice = Math.max(...data.forecast.map(f => f.upper_bound)) * 1.15
+  const baseline = data.baseline_price
+  const n        = data.forecast.length
+  const W        = 560
+  const H        = 220
+  const PAD_L    = 55
+  const PAD_B    = 30
+  const PAD_T    = 20
+  const chartW   = W - PAD_L - 20
+  const chartH   = H - PAD_B - PAD_T
+  const barW     = Math.min(60, (chartW / n) * 0.55)
+  const gap      = (chartW - n * barW) / (n + 1)
 
-type BP = "mobile" | "tablet" | "desktop"
+  const toY = (price: number) => PAD_T + chartH - (price / maxPrice) * chartH
 
-function useBreakpoint(): BP {
-  const [bp, setBp] = useState<BP>("desktop")
-  useEffect(() => {
-    function update() {
-      const w = window.innerWidth
-      setBp(w < 768 ? "mobile" : w < 1024 ? "tablet" : "desktop")
-    }
-    update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
-  }, [])
-  return bp
-}
-
-const SEVERITIES = ["All", "Critical", "Severe", "Moderate"] as const
-type SeverityFilter = typeof SEVERITIES[number]
-
-interface DashboardClientProps {
-  externalSidebarOpen ?: boolean
-  onExternalSidebarClose?: () => void
-}
-
-export default function DashboardClient({
-  externalSidebarOpen  = false,
-  onExternalSidebarClose = () => {},
-}: DashboardClientProps) {
-  const bp = useBreakpoint()
-
-  const [selectedDistrict, setSelectedDistrict] = useState<DistrictDetail | null>(null)
-  const [activeSeverity,   setActiveSeverity  ] = useState<SeverityFilter>("All")
-  const [activeBasemap,    setActiveBasemap   ] = useState(0)
-  const [forecastOpen,     setForecastOpen    ] = useState(false)
-  const [sidebarOpen,      setSidebarOpen     ] = useState(false)
-
-  // Sync external sidebar trigger (from Header critical badge)
-  useEffect(() => {
-    if (externalSidebarOpen) setSidebarOpen(true)
-  }, [externalSidebarOpen])
-
-  function handleSidebarClose() {
-    setSidebarOpen(false)
-    onExternalSidebarClose()
-  }
-
-  function handleDistrictClick(district: DistrictDetail | null) {
-    setSelectedDistrict(district)
-    setForecastOpen(false)
-    setSidebarOpen(false)
-  }
-
-  function handleClose() {
-    setSelectedDistrict(null)
-    setForecastOpen(false)
-  }
-
-  // ── MOBILE ───────────────────────────────────────────────────────────────
-  if (bp === "mobile") {
-    return (
-      <div className="flex flex-1 overflow-hidden flex-col relative">
-
-        {/* Mobile basemap floating bar */}
-        <div className="absolute top-2 right-2 z-[400] flex gap-1">
-          {BASEMAPS.map((b, i) => (
-            <button key={b.name} onClick={() => setActiveBasemap(i)} title={b.name}
-              className={`text-[10px] px-2 py-1 rounded border font-mono transition-colors
-                          shadow-md flex-shrink-0 ${
-                activeBasemap === i
-                  ? "bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900 font-bold"
-                  : "bg-white/90 dark:bg-slate-900/90 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400"
-              }`}>
-              {b.name === "OpenStreetMap" ? "OSM" : b.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Full-screen map */}
-        <div className="flex-1 relative overflow-hidden">
-          <MapContainer
-            onDistrictClick={handleDistrictClick}
-            severityFilter={activeSeverity}
-            basemap={BASEMAPS[activeBasemap]}
-          />
-          <MapLegend />
-
-          {!selectedDistrict && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400]
-                            bg-slate-900/90 border border-slate-700 rounded-full
-                            px-4 py-1.5 text-xs text-slate-400 pointer-events-none">
-              Tap a district to explore
-            </div>
-          )}
-
-          <MobileSidebar
-            open={sidebarOpen}
-            onClose={handleSidebarClose}
-            selectedDistrict={selectedDistrict}
-          />
-
-          <MobileDrawer
-            district={selectedDistrict}
-            onClose={handleClose}
-            onForecastOpen={() => setForecastOpen(true)}
-            forecastOpen={forecastOpen}
-            onForecastClose={() => setForecastOpen(false)}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // ── TABLET ───────────────────────────────────────────────────────────────
-  if (bp === "tablet") {
-    return (
-      <div className="flex flex-1 overflow-hidden flex-col">
-        <div className="flex items-center gap-3 px-4 py-2
-                        bg-white dark:bg-slate-900
-                        border-b border-slate-200 dark:border-slate-700 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono uppercase tracking-widest">Spikes</span>
-            <div className="flex gap-1">
-              {SEVERITIES.map(s => (
-                <button key={s} onClick={() => setActiveSeverity(s)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    activeSeverity === s
-                      ? "bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-white dark:text-slate-900 font-bold"
-                      : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400"
-                  }`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono uppercase tracking-widest">Basemap</span>
-            <div className="flex gap-1">
-              {BASEMAPS.map((b, i) => (
-                <button key={b.name} onClick={() => setActiveBasemap(i)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    activeBasemap === i
-                      ? "bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-white dark:text-slate-900 font-bold"
-                      : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400"
-                  }`}>
-                  {b.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button onClick={() => setSidebarOpen(o => !o)}
-            className="ml-auto text-xs px-2 py-1 rounded border
-                       border-slate-300 dark:border-slate-600
-                       text-slate-500 dark:text-slate-400
-                       hover:bg-slate-100 dark:hover:bg-slate-800">
-            {sidebarOpen ? "Hide panel" : "≡ Overview"}
-          </button>
-        </div>
-
-        <div className="flex flex-1 overflow-hidden relative">
-          {sidebarOpen && (
-            <aside className="w-64 flex-shrink-0
-                              bg-white dark:bg-slate-900
-                              border-r border-slate-200 dark:border-slate-700
-                              flex flex-col overflow-hidden">
-              {!selectedDistrict && <StatsPanel />}
-              <div className="flex-1 overflow-hidden">
-                {selectedDistrict ? <NarrativePanel districtName={selectedDistrict.district} /> : <AlertPanel />}
-              </div>
-            </aside>
-          )}
-          <div className="flex-1 relative overflow-hidden">
-            <MapContainer onDistrictClick={handleDistrictClick} severityFilter={activeSeverity} basemap={BASEMAPS[activeBasemap]} />
-            <MapLegend />
-            <div className="absolute top-0 right-0 bottom-0 w-72 z-[500]
-                            bg-white dark:bg-slate-900
-                            border-l border-slate-200 dark:border-slate-700 overflow-hidden">
-              {selectedDistrict && !forecastOpen ? (
-                <DistrictPopup district={selectedDistrict} onClose={handleClose} onForecastOpen={() => setForecastOpen(true)} />
-              ) : !forecastOpen ? (
-                <div className="flex flex-col h-full">
-                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                    <div className="text-xs text-slate-400 font-mono uppercase tracking-widest">Click a district to see details</div>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center text-slate-400 dark:text-slate-600 text-xs px-4">
-                      <div className="text-2xl mb-2">🗺</div>
-                      <div>Select any district on the map to view risk analysis</div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            {selectedDistrict && forecastOpen && (
-              <>
-                <div className="absolute inset-0 z-[500]" onClick={() => setForecastOpen(false)} />
-                <div className="absolute top-0 right-0 bottom-0 z-[600]
-                                bg-white dark:bg-slate-900
-                                border-l border-slate-200 dark:border-slate-700 overflow-hidden"
-                  style={{ width: "65%" }}>
-                  <ForecastDrawer district={selectedDistrict} onClose={() => setForecastOpen(false)} />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── DESKTOP ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-1 overflow-hidden flex-col">
-      <div className="flex items-center gap-4 px-4 py-2
-                      bg-white dark:bg-slate-900
-                      border-b border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono uppercase tracking-widest">Spikes</span>
-          <div className="flex gap-1">
-            {SEVERITIES.map(s => (
-              <button key={s} onClick={() => setActiveSeverity(s)}
-                className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                  activeSeverity === s
-                    ? "bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-white dark:text-slate-900 font-bold"
-                    : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400"
-                }`}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono uppercase tracking-widest">Basemap</span>
-          <div className="flex gap-1">
-            {BASEMAPS.map((b, i) => (
-              <button key={b.name} onClick={() => setActiveBasemap(i)}
-                className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                  activeBasemap === i
-                    ? "bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-white dark:text-slate-900 font-bold"
-                    : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400"
-                }`}>
-                {b.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside className={`flex-shrink-0
-                           bg-white dark:bg-slate-900
-                           border-r border-slate-200 dark:border-slate-700
-                           flex flex-col overflow-hidden transition-all duration-300 ${
-          selectedDistrict ? "w-80" : "w-64"
-        }`}>
-          {!selectedDistrict && <StatsPanel />}
-          <div className="flex-1 overflow-hidden">
-            {selectedDistrict ? <NarrativePanel districtName={selectedDistrict.district} /> : <AlertPanel />}
-          </div>
-        </aside>
+      {/* Grid lines + Y labels */}
+      {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
+        const y     = toY(maxPrice * t)
+        const price = Math.round(maxPrice * t)
+        return (
+          <g key={i}>
+            <line x1={PAD_L} y1={y} x2={W - 20} y2={y}
+                  stroke="#0f0f0f" strokeWidth="1"/>
+            <text x={PAD_L - 4} y={y + 4} fontSize="10"
+                  fill="#1b1d1f" textAnchor="end">
+              {price >= 1000 ? `${(price/1000).toFixed(1)}k` : price}
+            </text>
+          </g>
+        )
+      })}
 
-        <div className="flex-1 relative overflow-hidden">
-          <MapContainer onDistrictClick={handleDistrictClick} severityFilter={activeSeverity} basemap={BASEMAPS[activeBasemap]} />
-          <MapLegend />
+      {/* Baseline line */}
+      <line x1={PAD_L} y1={toY(baseline)} x2={W - 20} y2={toY(baseline)}
+            stroke="#F5C842" strokeWidth="1.5" strokeDasharray="5,3"/>
+      <text x={PAD_L + 4} y={toY(baseline) - 4} fontSize="9" fill="#F5C842">
+        baseline {baseline.toLocaleString()} MWK
+      </text>
 
-          <div className="absolute top-0 right-0 bottom-0 w-64 z-[500]
-                          bg-white dark:bg-slate-900
-                          border-l border-slate-200 dark:border-slate-700 overflow-hidden">
-            {selectedDistrict && !forecastOpen ? (
-              <DistrictPopup district={selectedDistrict} onClose={handleClose} onForecastOpen={() => setForecastOpen(true)} />
-            ) : !forecastOpen ? (
-              <div className="flex flex-col h-full">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                  <div className="text-xs text-slate-400 font-mono uppercase tracking-widest">Click a district to see details</div>
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-slate-400 dark:text-slate-600 text-xs px-4">
-                    <div className="text-2xl mb-2">🗺</div>
-                    <div>Select any district on the map to view risk analysis and spike history</div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
+      {/* Bars */}
+      {data.forecast.map((f, i) => {
+        const x      = PAD_L + gap + i * (barW + gap)
+        const yBar   = toY(f.forecast)
+        const yLow   = toY(f.lower_bound)
+        const yHigh  = toY(f.upper_bound)
+        const barH   = H - PAD_B - yBar
+        const color  = riskColor(f.risk_level)
 
-          {selectedDistrict && forecastOpen && (
-            <>
-              <div className="absolute inset-0 z-[500]" onClick={() => setForecastOpen(false)} />
-              <div className="absolute top-0 right-0 bottom-0 z-[600]
-                              bg-white dark:bg-slate-900
-                              border-l border-slate-200 dark:border-slate-700 overflow-hidden"
-                style={{ width: "55%" }}>
-                <ForecastDrawer district={selectedDistrict} onClose={() => setForecastOpen(false)} />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        return (
+          <g key={i}>
+            {/* Confidence band */}
+            <rect x={x + barW * 0.1} y={yHigh}
+                  width={barW * 0.8} height={Math.abs(yLow - yHigh)}
+                  fill={color} opacity="0.1" rx="3"/>
+
+            {/* Bar */}
+            <rect x={x} y={yBar} width={barW} height={barH}
+                  fill={color} opacity="0.85" rx="4"/>
+
+            {/* Price label */}
+            <text x={x + barW / 2} y={yBar - 6}
+                  fontSize="16" fill={color} textAnchor="middle" fontWeight="700">
+              {f.forecast >= 1000
+                ? `${(f.forecast/1000).toFixed(1)}k`
+                : f.forecast}
+            </text>
+
+            {/* Month label */}
+            <text x={x + barW / 2} y={H - 2}
+                  fontSize="15" fill="#000000" textAnchor="middle">
+              {f.month_label.split(" ")[0]}
+            </text>
+
+            {/* Season label */}
+            <text x={x + barW / 2} y={H - 18}
+                  fontSize="10" fill="#0f0f0f" textAnchor="middle">
+              {f.season.split(" ")[0]}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
   )
 }

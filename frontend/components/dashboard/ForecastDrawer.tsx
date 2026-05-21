@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import type { DistrictDetail, ForecastData } from "@/lib/types"
 import { API, FORECAST_COMMODITIES } from "@/lib/constants"
-import ForecastChart  from "./ForecastChart"
+import { ForecastChart }  from "./ForecastChart"
 import { riskBg, riskColor } from "@/lib/hooks/useColor"
 
 

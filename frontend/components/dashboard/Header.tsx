@@ -127,13 +127,13 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
       {/* ── TITLE BAR ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 md:px-4 h-11">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="hidden md:block text-[10px] font-mono
-                           text-slate-400 dark:text-slate-500">
-            FOOD PRICE INTELLIGENCE
+          <span className="hidden md:block text-[18px] font-bold
+                           text-slate-900 dark:text-slate-900">
+            MALAWI FOOD PRICE INTELLIGENCE
           </span>
           <span className="hidden md:block text-slate-300 dark:text-slate-600">·</span>
-          <span className="font-bold text-slate-900 dark:text-slate-100 tracking-wide text-sm">
-            Malawi
+          <span className="font-bold block sm:hidden text-slate-900 dark:text-slate-100 tracking-wide text-sm">
+            FOOD PRICE INTELLIGENCE
           </span>
         </div>
 
