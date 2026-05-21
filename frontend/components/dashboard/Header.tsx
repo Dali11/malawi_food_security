@@ -128,7 +128,7 @@ export default function Header({ activePage = "dashboard" }: HeaderProps) {
       <div className="flex items-center justify-between px-3 md:px-4 h-11">
         <div className="flex items-center gap-2 min-w-0">
           <span className="hidden md:block text-[18px] font-bold
-                           text-slate-900 dark:text-slate-900">
+                           text-slate-900 dark:text-slate-200">
             MALAWI FOOD PRICE INTELLIGENCE
           </span>
           <span className="hidden md:block text-slate-300 dark:text-slate-600">·</span>
