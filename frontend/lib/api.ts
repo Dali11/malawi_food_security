@@ -10,6 +10,7 @@ import type {
   SpikeCollection,
   Summary,
   PriceTrend,
+  ForecastData
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -76,6 +77,16 @@ export async function getDistrictPrices(
   return apiFetch<PriceTrend>(
     `/api/districts/${encodeURIComponent(district)}/prices?commodity=${encodeURIComponent(commodity)}`
   )
+}
+
+export async function getForecast(
+    district : string,
+    commodity: string = "Maize",
+    months   : number = 3
+): Promise<ForecastData> {
+    return apiFetch<ForecastData>(
+        `/api/forecast/${encodeURIComponent(district)}?commodity=${encodeURIComponent(commodity)}&months=${months}`
+    )
 }
 
 // ── Color helpers ──────────────────────────────────────────────────────────
