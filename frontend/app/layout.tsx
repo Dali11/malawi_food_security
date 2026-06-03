@@ -20,7 +20,7 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
             try {
-              const t = localStorage.getItem('mfs-theme') || 'dark';
+              const t = localStorage.getItem('mfs-theme') || 'light';
               document.documentElement.classList.toggle('dark', t === 'dark');
             } catch(e) {}
           })()

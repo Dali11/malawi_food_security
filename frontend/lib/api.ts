@@ -117,3 +117,42 @@ export function getRiskLabel(score: number): string {
   if (score <= 277)  return "High"
   return                    "Critical"
 }
+
+
+
+//______________seasonaBaseline___________________________
+export interface SeasonBaseline {
+    commodity      : string
+    current_season : string
+    districts      : {
+        district        : string
+        region          : string
+        risk_score      : number
+        current_price   : number | null
+        latest_date     : string | null
+        pct_vs_baseline : number | null
+        seasons         : Record<string, { avg_price: number; observations: number }>
+    }[]
+}
+
+export interface CropCalendar {
+    current_season : string
+    current_month  : string
+    seasons        : string[]
+    commodities    : {
+        commodity        : string
+        current_price    : number | null
+        current_season   : string
+        pct_vs_baseline  : number | null
+        status           : string
+        seasons          : Record<string, number | null>
+    }[]
+}
+
+export async function getSeasonBaseline(commodity: string): Promise<SeasonBaseline> {
+    return apiFetch<SeasonBaseline>(`/api/season/baseline?commodity=${encodeURIComponent(commodity)}`)
+}
+
+export async function getCropCalendar(): Promise<CropCalendar> {
+    return apiFetch<CropCalendar>("/api/season/calendar")
+}

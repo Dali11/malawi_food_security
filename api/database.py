@@ -19,7 +19,12 @@ pool = None
 async def connect():
     global pool
     config = {k: v for k, v in DB_CONFIG.items() if v is not None}
-    pool = await asyncpg.create_pool(**config, statement_cache_size=0)
+    pool = await asyncpg.create_pool(
+        **config,
+        statement_cache_size=0,
+        min_size=2,
+        max_size=5,
+    )
     print(f"✅ Database connected: {DB_CONFIG['database']} @ {DB_CONFIG['host']}")
 
 async def disconnect():

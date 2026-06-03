@@ -32,3 +32,10 @@ export const LEGEND = [
   { label: "Low",      color: "#FFE082" },
   { label: "Stable",   color: "#A5D6A7" },
 ]
+
+//____________METRIC CARDS_________________
+export const METRIC_CARDS = [
+  { label: "Critical", color: "#B71C1C" },
+  { label: "High",     color: "#EF5350" },
+  { label: "Moderate", color: "#FFAB40" },
+]
