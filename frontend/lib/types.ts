@@ -222,3 +222,65 @@ export type MobileDrawerProps = {
   forecastOpen: boolean
   onForecastClose: () => void
 }
+
+
+// ── Indicators ─────────────────────────────────────────────────────────────
+
+export interface IndicatorSummary {
+    fsi: {
+        avg_score          : number
+        critical_districts : number
+        stressed_districts : number
+        total_districts    : number
+    }
+    price_stress_index  : number
+    avg_volatility      : number
+    critical_commodities: number
+    latest_year         : number
+}
+
+export interface DistrictFSI {
+    district   : string
+    region     : string
+    fsi_score  : number
+    risk_score : number
+    stress     : "Critical" | "High" | "Moderate" | "Low"
+    volatility : number
+    coverage   : number
+}
+
+export interface PSIPoint {
+    month : string
+    year  : number
+    mo    : number
+    psi   : number
+}
+
+export interface CommodityStress {
+    commodity    : string
+    deviation    : number
+    stress_level : "critical" | "elevated" | "normal"
+}
+
+export interface LeanRisk {
+    tier  : "Critical" | "High" | "Moderate" | "Low"
+    count : number
+}
+
+export interface CommodityBaselinePoint {
+    year     : number
+    actual   : number
+    baseline : number
+}
+
+export interface CommodityBaseline {
+    commodity: string
+    baseline : number
+    series   : CommodityBaselinePoint[]
+}
+
+export interface SpikeDistribution {
+    region   : string
+    severity : string
+    count    : number
+}

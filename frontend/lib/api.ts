@@ -10,7 +10,14 @@ import type {
   SpikeCollection,
   Summary,
   PriceTrend,
-  ForecastData
+  ForecastData,
+  IndicatorSummary,
+  DistrictFSI,
+  PSIPoint,
+  CommodityStress,
+  LeanRisk,
+  SpikeDistribution,
+  CommodityBaseline,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -155,4 +162,38 @@ export async function getSeasonBaseline(commodity: string): Promise<SeasonBaseli
 
 export async function getCropCalendar(): Promise<CropCalendar> {
     return apiFetch<CropCalendar>("/api/season/calendar")
+}
+
+
+// ── Indicator API functions ─────────────────────────────────────────────────
+
+export async function getIndicatorSummary(): Promise<IndicatorSummary> {
+    return apiFetch<IndicatorSummary>("/api/indicators/summary")
+}
+
+export async function getDistrictFSI(region?: string): Promise<DistrictFSI[]> {
+    const qs = region ? `?region=${encodeURIComponent(region)}` : ""
+    return apiFetch<DistrictFSI[]>(`/api/indicators/districts${qs}`)
+}
+
+export async function getPSITrend(): Promise<PSIPoint[]> {
+    return apiFetch<PSIPoint[]>("/api/indicators/psi-trend")
+}
+
+export async function getCommodityStress(): Promise<CommodityStress[]> {
+    return apiFetch<CommodityStress[]>("/api/indicators/commodity-stress")
+}
+
+export async function getLeanSeasonRisk(): Promise<LeanRisk[]> {
+    return apiFetch<LeanRisk[]>("/api/indicators/lean-season-risk")
+}
+
+export async function getCommodityVsBaseline(commodity: string = "Maize"): Promise<CommodityBaseline> {
+    return apiFetch<CommodityBaseline>(
+        `/api/indicators/commodity-vs-baseline?commodity=${encodeURIComponent(commodity)}`
+    )
+}
+
+export async function getSpikeDistribution(): Promise<SpikeDistribution[]> {
+    return apiFetch<SpikeDistribution[]>("/api/indicators/spike-distribution")
 }
