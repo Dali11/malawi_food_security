@@ -284,3 +284,9 @@ export interface SpikeDistribution {
     severity : string
     count    : number
 }
+
+export interface PSITrendResponse {
+    commodity : string
+    district  : string
+    series    : PSIPoint[]
+}

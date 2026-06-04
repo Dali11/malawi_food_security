@@ -4,20 +4,20 @@
  */
 
 import type {
-  DistrictCollection,
-  DistrictDetail,
-  MarketCollection,
-  SpikeCollection,
-  Summary,
-  PriceTrend,
-  ForecastData,
-  IndicatorSummary,
-  DistrictFSI,
-  PSIPoint,
-  CommodityStress,
-  LeanRisk,
-  SpikeDistribution,
-  CommodityBaseline,
+    DistrictCollection,
+    DistrictDetail,
+    MarketCollection,
+    SpikeCollection,
+    Summary,
+    PriceTrend,
+    ForecastData,
+    IndicatorSummary,
+    DistrictFSI,
+    PSIPoint,
+    CommodityStress,
+    LeanRisk,
+    SpikeDistribution,
+    CommodityBaseline, PSITrendResponse,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -176,8 +176,15 @@ export async function getDistrictFSI(region?: string): Promise<DistrictFSI[]> {
     return apiFetch<DistrictFSI[]>(`/api/indicators/districts${qs}`)
 }
 
-export async function getPSITrend(): Promise<PSIPoint[]> {
-    return apiFetch<PSIPoint[]>("/api/indicators/psi-trend")
+export async function getPSITrend(
+    commodity?: string,
+    district? : string
+): Promise<PSITrendResponse> {
+    const q = new URLSearchParams()
+    if (commodity && commodity !== "All commodities") q.set("commodity", commodity)
+    if (district  && district  !== "All districts")  q.set("district",  district)
+    const qs = q.toString()
+    return apiFetch<PSITrendResponse>(`/api/indicators/psi-trend${qs ? `?${qs}` : ""}`)
 }
 
 export async function getCommodityStress(): Promise<CommodityStress[]> {
