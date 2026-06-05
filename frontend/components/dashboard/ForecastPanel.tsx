@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from "react"
 import {
     ComposedChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ReferenceLine, ResponsiveContainer, Cell,
-    type TooltipProps,
 } from "recharts"
+
+
 import type { ForecastData }    from "@/lib/types"
 import { FORECAST_COMMODITIES } from "@/lib/constants"
 import { riskBg, riskColor }    from "@/lib/hooks/useColor"
@@ -22,7 +23,10 @@ function fmt(v: number): string {
     return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 }
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+function CustomTooltip({ active, payload }: {
+    active?  : boolean
+    payload ?: any[]
+}) {
     if (!active || !payload?.length) return null
     const d = payload[0]?.payload
     return (
