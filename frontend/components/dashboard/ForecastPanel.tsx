@@ -5,7 +5,8 @@ import {
     ComposedChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ReferenceLine, ResponsiveContainer, Cell,
 } from "recharts"
-
+import type { TooltipProps } from "recharts"
+import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent"
 
 import type { ForecastData }    from "@/lib/types"
 import { FORECAST_COMMODITIES } from "@/lib/constants"
@@ -17,16 +18,12 @@ interface Props {
     onClose ?: () => void
 }
 
-// ── helpers — declared OUTSIDE component so they never re-create on render ──
-
 function fmt(v: number): string {
     return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 }
 
-function CustomTooltip({ active, payload }: {
-    active?  : boolean
-    payload ?: any[]
-}) {
+// ── Fix: use Recharts' own TooltipProps type ──────────────────────────────────
+function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
     if (!active || !payload?.length) return null
     const d = payload[0]?.payload
     return (
@@ -46,8 +43,6 @@ function CustomTooltip({ active, payload }: {
         </div>
     )
 }
-
-// ── main ──────────────────────────────────────────────────────────────────────
 
 export default function ForecastPanel({ district, onClose }: Props) {
     const [commodity, setCommodity] = useState("Maize")
@@ -84,7 +79,7 @@ export default function ForecastPanel({ district, onClose }: Props) {
     return (
         <div className="flex flex-col h-full" onClick={e => e.stopPropagation()}>
 
-            {/* ── Header ──────────────────────────────────────────────────── */}
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-3
                       border-b border-slate-700 flex-shrink-0"
                  style={{ background: "#1B3A6B" }}>
@@ -105,9 +100,8 @@ export default function ForecastPanel({ district, onClose }: Props) {
                 )}
             </div>
 
-            {/* ── Commodity selector ──────────────────────────────────────── */}
-            <div className="px-6 py-2 border-b border-slate-700/60 flex-shrink-0
-                      bg-slate-900/20">
+            {/* Commodity selector */}
+            <div className="px-6 py-2 border-b border-slate-700/60 flex-shrink-0 bg-slate-900/20">
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5">
                     Commodity
                 </p>
@@ -126,10 +120,9 @@ export default function ForecastPanel({ district, onClose }: Props) {
                 </div>
             </div>
 
-            {/* ── Content ─────────────────────────────────────────────────── */}
+            {/* Content */}
             <div className="flex-1 overflow-y-auto px-6 py-3 space-y-3">
 
-                {/* Loading */}
                 {loading && (
                     <div className="space-y-2.5">
                         <div className="bg-slate-800 rounded-lg animate-pulse h-12"/>
@@ -142,7 +135,6 @@ export default function ForecastPanel({ district, onClose }: Props) {
                     </div>
                 )}
 
-                {/* Error */}
                 {!loading && error && (
                     <div className="bg-red-900/20 border border-red-800 rounded-lg p-3
                           text-red-400 flex items-start gap-2">
@@ -159,7 +151,6 @@ export default function ForecastPanel({ district, onClose }: Props) {
                     </div>
                 )}
 
-                {/* Forecast */}
                 {!loading && data && (
                     <>
                         {/* Alert banner */}
@@ -170,19 +161,19 @@ export default function ForecastPanel({ district, onClose }: Props) {
                             padding     : "10px 12px",
                         }}>
                             <div className="flex items-center gap-2 mb-0.5">
-                <span style={{
-                    background  : riskColor(data.alert_level),
-                    color       : "#fff",
-                    fontSize    : 10,
-                    fontWeight  : 600,
-                    padding     : "1px 7px",
-                    borderRadius: 3,
-                }}>
-                  {data.alert_level} alert
-                </span>
+                                <span style={{
+                                    background  : riskColor(data.alert_level),
+                                    color       : "#fff",
+                                    fontSize    : 10,
+                                    fontWeight  : 600,
+                                    padding     : "1px 7px",
+                                    borderRadius: 3,
+                                }}>
+                                    {data.alert_level} alert
+                                </span>
                                 <span style={{ fontSize: 11, color: riskColor(data.alert_level) }}>
-                  · {data.trend} trend
-                </span>
+                                    · {data.trend} trend
+                                </span>
                             </div>
                             <p style={{ fontSize: 12, color: riskColor(data.alert_level), lineHeight: 1.5 }}>
                                 {data.insight}
@@ -194,17 +185,13 @@ export default function ForecastPanel({ district, onClose }: Props) {
                             <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-3">
                                 {commodity} price forecast — MWK/KG
                             </p>
-
                             <ResponsiveContainer width="100%" height={100}>
                                 <ComposedChart
                                     data={chartData}
                                     margin={{ top: 16, right: 12, left: 0, bottom: 0 }}
                                     barCategoryGap="45%"
                                 >
-                                    <CartesianGrid
-                                        vertical={false}
-                                        stroke="rgba(255,255,255,0.06)"
-                                    />
+                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
@@ -218,13 +205,10 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                         tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
                                         width={34}
                                     />
-
-                                    {/* CustomTooltip passed as element reference — not created during render */}
                                     <Tooltip
                                         content={CustomTooltip}
                                         cursor={{ fill: "rgba(255,255,255,0.04)" }}
                                     />
-
                                     <ReferenceLine
                                         y={data.baseline_price}
                                         stroke="#F5C842"
@@ -238,45 +222,38 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                             dy      : -6,
                                         }}
                                     />
-
-                                    <Bar
-                                        dataKey="forecast"
-                                        radius={[4, 4, 0, 0]}
-                                        label={{
-                                            position  : "top",
-                                            fontSize  : 11,
-                                            fontWeight: 700,
-                                            // ← fix: use value type from recharts, cast to number safely
-                                            formatter : (v: unknown) => fmt(Number(v)),
-                                            fill      : "rgba(255,255,255,0.7)",
-                                        }}
-                                    >
+                                    <Bar dataKey="forecast" radius={[4, 4, 0, 0]}
+                                         label={{
+                                             position  : "top",
+                                             fontSize  : 11,
+                                             fontWeight: 700,
+                                             formatter : (v: unknown) => fmt(Number(v)),
+                                             fill      : "rgba(255,255,255,0.7)",
+                                         }}>
                                         {chartData.map((d, i) => (
                                             <Cell key={i} fill={riskColor(d.risk)} fillOpacity={0.88}/>
                                         ))}
                                     </Bar>
-
                                 </ComposedChart>
                             </ResponsiveContainer>
 
                             <div className="flex gap-4 mt-2 flex-wrap">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="inline-block w-4 h-0.5 bg-yellow-400"/>
-                  12-month baseline
-                </span>
                                 <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="inline-block w-2.5 h-2.5 rounded"
-                        style={{ background: "#FCEBEB", border: "0.5px solid #F09595" }}/>
-                  80% confidence band
-                </span>
+                                    <span className="inline-block w-4 h-0.5 bg-yellow-400"/>
+                                    12-month baseline
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                                    <span className="inline-block w-2.5 h-2.5 rounded"
+                                          style={{ background: "#FCEBEB", border: "0.5px solid #F09595" }}/>
+                                    80% confidence band
+                                </span>
                             </div>
                         </div>
 
                         {/* Month cards */}
                         <div className="grid grid-cols-3 gap-2">
                             {data.forecast.map((f, i) => (
-                                <div key={i}
-                                     className="bg-white border border-slate-200 shadow-sm
+                                <div key={i} className="bg-white border border-slate-200 shadow-sm
                                 dark:border-none dark:bg-slate-800 rounded-xl p-3">
                                     <p className="text-xs text-slate-500 mb-0.5">{f.month_label}</p>
                                     <p className="text-[11px] text-slate-400 mb-1.5">{f.season}</p>
@@ -286,20 +263,20 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                         <span className="text-[10px] font-normal text-slate-500 ml-1">MWK</span>
                                     </p>
                                     <div className="flex items-center justify-between mb-1.5">
-                    <span style={{
-                        background  : riskBg(f.risk_level),
-                        color       : riskColor(f.risk_level),
-                        fontSize    : 10,
-                        fontWeight  : 600,
-                        padding     : "1px 5px",
-                        borderRadius: 3,
-                    }}>
-                      {f.risk_level}
-                    </span>
+                                        <span style={{
+                                            background  : riskBg(f.risk_level),
+                                            color       : riskColor(f.risk_level),
+                                            fontSize    : 10,
+                                            fontWeight  : 600,
+                                            padding     : "1px 5px",
+                                            borderRadius: 3,
+                                        }}>
+                                            {f.risk_level}
+                                        </span>
                                         <span className="text-xs font-mono"
                                               style={{ color: riskColor(f.risk_level) }}>
-                      {f.pct_vs_baseline > 0 ? "+" : ""}{f.pct_vs_baseline}%
-                    </span>
+                                            {f.pct_vs_baseline > 0 ? "+" : ""}{f.pct_vs_baseline}%
+                                        </span>
                                     </div>
                                     <p className="text-[10px] text-slate-400">
                                         {f.lower_bound.toLocaleString()} – {f.upper_bound.toLocaleString()} MWK
