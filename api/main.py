@@ -7,26 +7,40 @@ Malawi Food Security GIS API — Phase 4
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.database import connect, disconnect
-from api.routers import districts, markets, spikes, summary, reports, compare, narrative, forecast, export, pipeline, heatmap, season
+from api.routers import (
+    districts,
+    markets,
+    spikes,
+    summary,
+    reports,
+    compare,
+    narrative,
+    forecast,
+    export,
+    pipeline,
+    heatmap,
+    season,
+    indicators,
+)
 
-# ── App setup ─────────────────────────────────────────────────
+# ── App setup ──────────────────────────────────────────────────────────────────
 app = FastAPI(
     title       = "Malawi Food Security GIS API",
     description = "Spatial food price spike detection and district risk analysis",
     version     = "1.0.0",
-    docs_url    = "/docs",     # Swagger UI at /docs
-    redoc_url   = "/redoc",    # ReDoc UI at /redoc
+    docs_url    = "/docs",
+    redoc_url   = "/redoc",
 )
 
-# ── CORS — allow Leaflet frontend to call this API ────────────
+# ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins  = ["*"],    # restrict to your domain in production
+    allow_origins  = ["*"],   # restrict to your domain in production
     allow_methods  = ["GET"],
     allow_headers  = ["*"],
 )
 
-# ── Database lifecycle ────────────────────────────────────────
+# ── Database lifecycle ─────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup():
     await connect()
@@ -35,7 +49,7 @@ async def startup():
 async def shutdown():
     await disconnect()
 
-# ── Routers ───────────────────────────────────────────────────
+# ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(districts.router)
 app.include_router(markets.router)
 app.include_router(spikes.router)
@@ -48,8 +62,9 @@ app.include_router(export.router)
 app.include_router(pipeline.router)
 app.include_router(heatmap.router)
 app.include_router(season.router)
+app.include_router(indicators.router)   # ← new
 
-# ── Health check ──────────────────────────────────────────────
+# ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
 async def root():
     return {
@@ -64,6 +79,13 @@ async def root():
             "/api/spikes?severity=Critical",
             "/api/spikes/critical",
             "/api/summary",
+            "/api/indicators/summary",
+            "/api/indicators/districts",
+            "/api/indicators/districts?region=Southern",
+            "/api/indicators/psi-trend",
+            "/api/indicators/commodity-stress",
+            "/api/indicators/lean-season-risk",
+            "/api/indicators/maize-vs-baseline",
             "/docs",
         ]
     }
