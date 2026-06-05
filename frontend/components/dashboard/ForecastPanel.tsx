@@ -5,8 +5,6 @@ import {
     ComposedChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ReferenceLine, ResponsiveContainer, Cell,
 } from "recharts"
-import type { TooltipProps } from "recharts"
-import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent"
 
 import type { ForecastData }    from "@/lib/types"
 import { FORECAST_COMMODITIES } from "@/lib/constants"
@@ -22,8 +20,9 @@ function fmt(v: number): string {
     return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 }
 
-// ── Fix: use Recharts' own TooltipProps type ──────────────────────────────────
-function CustomTooltip({ active, payload }: TooltipProps<ValueType, NameType>) {
+// ── Fix: loose typing avoids Recharts version-specific TooltipProps mismatch ──
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomTooltip({ active, payload }: any) {
     if (!active || !payload?.length) return null
     const d = payload[0]?.payload
     return (
