@@ -90,7 +90,7 @@ export function ForecastChart({ data }: Props) {
                          position: "top",
                          fontSize : 10,
                          fontWeight: 700,
-                         formatter: (v: number) => fmt(v),
+                         formatter: (v: unknown) => fmt(Number(v)),
                          fill     : "currentColor",
                      }}>
                     {chartData.map((d, i) => (
