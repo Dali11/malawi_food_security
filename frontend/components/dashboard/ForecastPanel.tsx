@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react"
 import {
     ComposedChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ReferenceLine, ResponsiveContainer, Cell,
+    type TooltipProps,
 } from "recharts"
 import type { ForecastData }    from "@/lib/types"
 import { FORECAST_COMMODITIES } from "@/lib/constants"
@@ -15,13 +16,13 @@ interface Props {
     onClose ?: () => void
 }
 
-// ── chart helpers ─────────────────────────────────────────────────────────────
+// ── helpers — declared OUTSIDE component so they never re-create on render ──
 
-function fmt(v: number) {
+function fmt(v: number): string {
     return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
     if (!active || !payload?.length) return null
     const d = payload[0]?.payload
     return (
@@ -128,7 +129,7 @@ export default function ForecastPanel({ district, onClose }: Props) {
                 {loading && (
                     <div className="space-y-2.5">
                         <div className="bg-slate-800 rounded-lg animate-pulse h-12"/>
-                        <div className="bg-slate-800 rounded-lg animate-pulse h-48"/>
+                        <div className="bg-slate-800 rounded-lg animate-pulse h-40"/>
                         <div className="grid grid-cols-3 gap-2">
                             {[1, 2, 3].map(i => (
                                 <div key={i} className="bg-slate-800 rounded-lg animate-pulse h-24"/>
@@ -175,7 +176,7 @@ export default function ForecastPanel({ district, onClose }: Props) {
                 }}>
                   {data.alert_level} alert
                 </span>
-                                <span style={{ fontSize: 12, color: riskColor(data.alert_level) }}>
+                                <span style={{ fontSize: 11, color: riskColor(data.alert_level) }}>
                   · {data.trend} trend
                 </span>
                             </div>
@@ -190,24 +191,22 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                 {commodity} price forecast — MWK/KG
                             </p>
 
-                            <ResponsiveContainer width="100%" height={120}>
+                            <ResponsiveContainer width="100%" height={100}>
                                 <ComposedChart
                                     data={chartData}
-                                    margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
+                                    margin={{ top: 16, right: 12, left: 0, bottom: 0 }}
                                     barCategoryGap="45%"
                                 >
                                     <CartesianGrid
                                         vertical={false}
                                         stroke="rgba(255,255,255,0.06)"
                                     />
-
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fontSize: 11, fill: "rgba(255,255,255,0.55)" }}
                                     />
-
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
@@ -216,8 +215,9 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                         width={34}
                                     />
 
+                                    {/* CustomTooltip passed as element reference — not created during render */}
                                     <Tooltip
-                                        content={<CustomTooltip/>}
+                                        content={CustomTooltip}
                                         cursor={{ fill: "rgba(255,255,255,0.04)" }}
                                     />
 
@@ -228,7 +228,7 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                         strokeWidth={1.5}
                                         label={{
                                             value   : `baseline ${fmt(data.baseline_price)} MWK`,
-                                            position: "insideTopLeft",
+                                            position: "insideTopRight",
                                             fontSize: 9,
                                             fill    : "#F5C842",
                                             dy      : -6,
@@ -242,7 +242,8 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                             position  : "top",
                                             fontSize  : 11,
                                             fontWeight: 700,
-                                            formatter : (v: number) => fmt(v),
+                                            // ← fix: use value type from recharts, cast to number safely
+                                            formatter : (v: unknown) => fmt(Number(v)),
                                             fill      : "rgba(255,255,255,0.7)",
                                         }}
                                     >
@@ -278,9 +279,7 @@ export default function ForecastPanel({ district, onClose }: Props) {
                                     <p className="text-xl font-bold font-mono mb-1.5"
                                        style={{ color: riskColor(f.risk_level) }}>
                                         {f.forecast.toLocaleString()}
-                                        <span className="text-[10px] font-normal text-slate-500 ml-1">
-                      MWK
-                    </span>
+                                        <span className="text-[10px] font-normal text-slate-500 ml-1">MWK</span>
                                     </p>
                                     <div className="flex items-center justify-between mb-1.5">
                     <span style={{

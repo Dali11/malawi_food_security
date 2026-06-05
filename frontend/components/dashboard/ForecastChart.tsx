@@ -77,8 +77,8 @@ export function ForecastChart({ data }: Props) {
                     strokeWidth={1.5}
                     label={{
                         value  : `baseline ${fmt(baseline)} MWK`,
-                        position: "insideTopLeft",
-                        fontSize: 9,
+                        position: "insideTopRight",
+                        fontSize: 11,
                         fill   : "#F5C842",
                         dy     : -6,
                     }}
