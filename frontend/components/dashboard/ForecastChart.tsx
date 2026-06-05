@@ -1,95 +1,104 @@
-import { riskColor } from "@/lib/hooks/useColor"
-import { ForecastData } from "@/lib/types"
+import {
+    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+    Tooltip, ReferenceLine, ResponsiveContainer, Cell,
+} from "recharts"
+import type { ForecastData } from "@/lib/types"
+import { riskColor }         from "@/lib/hooks/useColor"
 
-export function ForecastChart({ data }: { data: ForecastData }) {
-    const maxPrice  = Math.max(...data.forecast.map(f => f.upper_bound)) * 1.2
-    const baseline  = data.baseline_price
-    const n         = data.forecast.length
-    const W         = 560
-    const H         = 150
-    const PAD_L     = 52
-    const PAD_B     = 36
-    const PAD_T     = 18
-    const chartW    = W - PAD_L - 20
-    const chartH    = H - PAD_B - PAD_T
-    const barW      = Math.min(32, (chartW / n) * 0.32)
-    const gap       = (chartW - n * barW) / (n + 1)
+interface Props { data: ForecastData }
 
-    const toY = (price: number) => PAD_T + chartH - (price / maxPrice) * chartH
+export function ForecastChart({ data }: Props) {
+    const chartData = data.forecast.map(f => ({
+        name       : f.month_label.split(" ")[0],   // "April"
+        year       : f.month_label.split(" ")[1],   // "2026"
+        season     : f.season.split(" ")[0],        // "Harvest"
+        forecast   : Math.round(f.forecast),
+        lower      : Math.round(f.lower_bound),
+        upper      : Math.round(f.upper_bound),
+        risk       : f.risk_level,
+        pct        : f.pct_vs_baseline,
+    }))
+
+    const baseline = data.baseline_price
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (!active || !payload?.length) return null
+        const d = payload[0]?.payload
+        return (
+            <div className="bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs shadow-xl">
+                <p className="font-semibold text-white mb-1">{d?.name} {d?.year}</p>
+                <p className="text-slate-300">{d?.season} season</p>
+                <p className="mt-1" style={{ color: riskColor(d?.risk) }}>
+                    {d?.forecast?.toLocaleString()} MWK
+                    <span className="ml-1.5 text-slate-400">
+            ({d?.pct > 0 ? "+" : ""}{d?.pct}% vs baseline)
+          </span>
+                </p>
+                <p className="text-slate-400 mt-0.5">
+                    Range: {d?.lower?.toLocaleString()} – {d?.upper?.toLocaleString()}
+                </p>
+            </div>
+        )
+    }
+
+    const fmt = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 
     return (
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+        <ResponsiveContainer width="100%" height={160}>
+            <ComposedChart
+                data={chartData}
+                margin={{ top: 20, right: 16, left: 8, bottom: 0 }}
+                barCategoryGap="40%"
+            >
+                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)"/>
 
-            {/* Grid lines + Y labels */}
-            {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
-                const y     = toY(maxPrice * t)
-                const price = Math.round(maxPrice * t)
-                return (
-                    <g key={i}>
-                        <line x1={PAD_L} y1={y} x2={W - 20} y2={y}
-                              stroke="currentColor" strokeWidth="0.5" opacity="0.15"/>
-                        <text x={PAD_L - 5} y={y + 4} fontSize="9"
-                              fill="currentColor" opacity="0.5" textAnchor="end">
-                            {price >= 1000 ? `${(price / 1000).toFixed(1)}k` : price}
-                        </text>
-                    </g>
-                )
-            })}
+                <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.5)" }}
+                />
 
-            {/* Baseline */}
-            <line x1={PAD_L} y1={toY(baseline)} x2={W - 20} y2={toY(baseline)}
-                  stroke="#F5C842" strokeWidth="1.5" strokeDasharray="5,3"/>
-            <text x={PAD_L + 6} y={toY(baseline) - 4} fontSize="8" fill="#F5C842">
-                baseline {baseline.toLocaleString()} MWK
-            </text>
+                <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={fmt}
+                    tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
+                    width={36}
+                />
 
-            {/* Bars */}
-            {data.forecast.map((f, i) => {
-                const x     = PAD_L + gap + i * (barW + gap)
-                const yBar  = toY(f.forecast)
-                const yLow  = toY(f.lower_bound)
-                const yHigh = toY(f.upper_bound)
-                const barH  = H - PAD_B - yBar
-                const color = riskColor(f.risk_level)
-                const cx    = x + barW / 2
+                <Tooltip content={<CustomTooltip/>} cursor={{ fill: "rgba(255,255,255,0.04)" }}/>
 
-                return (
-                    <g key={i}>
-                        {/* Confidence band */}
-                        <rect x={x + barW * 0.05} y={yHigh}
-                              width={barW * 0.9} height={Math.abs(yLow - yHigh)}
-                              fill={color} opacity="0.12" rx="2"/>
-                        {/* Bar */}
-                        <rect x={x} y={yBar} width={barW} height={barH}
-                              fill={color} opacity="0.82" rx="3"/>
-                        {/* Price label */}
-                        <text x={cx} y={yBar - 5} fontSize="10"
-                              fill={color} textAnchor="middle" fontWeight="700">
-                            {f.forecast >= 1000
-                                ? `${(f.forecast / 1000).toFixed(1)}k`
-                                : f.forecast}
-                        </text>
-                        {/* Season */}
-                        <text x={cx} y={H - PAD_B + 10}
-                              fontSize="7.5" fill="currentColor" opacity="0.45"
-                              textAnchor="middle">
-                            {f.season.split(" ")[0]}
-                        </text>
-                        {/* Month */}
-                        <text x={cx} y={H - PAD_B + 21}
-                              fontSize="9.5" fill="currentColor" opacity="0.7"
-                              textAnchor="middle" fontWeight="500">
-                            {f.month_label.split(" ")[0]}
-                        </text>
-                        {/* Year */}
-                        <text x={cx} y={H - PAD_B + 31}
-                              fontSize="7.5" fill="currentColor" opacity="0.35"
-                              textAnchor="middle">
-                            {f.month_label.split(" ")[1]}
-                        </text>
-                    </g>
-                )
-            })}
-        </svg>
+                {/* Baseline reference line */}
+                <ReferenceLine
+                    y={baseline}
+                    stroke="#F5C842"
+                    strokeDasharray="5 3"
+                    strokeWidth={1.5}
+                    label={{
+                        value  : `baseline ${fmt(baseline)} MWK`,
+                        position: "insideTopLeft",
+                        fontSize: 9,
+                        fill   : "#F5C842",
+                        dy     : -6,
+                    }}
+                />
+
+                {/* Bars — coloured by risk level */}
+                <Bar dataKey="forecast" radius={[3, 3, 0, 0]}
+                     label={{
+                         position: "top",
+                         fontSize : 10,
+                         fontWeight: 700,
+                         formatter: (v: number) => fmt(v),
+                         fill     : "currentColor",
+                     }}>
+                    {chartData.map((d, i) => (
+                        <Cell key={i} fill={riskColor(d.risk)} fillOpacity={0.85}/>
+                    ))}
+                </Bar>
+
+            </ComposedChart>
+        </ResponsiveContainer>
     )
 }
