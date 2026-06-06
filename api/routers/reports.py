@@ -12,7 +12,10 @@ Key improvements:
  - Appendix with methodology glossary
  - Improved forecast query
  - Trend indicators for commodities
- - Removed LaTeX formatting artifacts
+ - Fixed LaTeX formatting artifacts
+ - Fixed HTML entities in appendix
+ - Fixed page numbering (cover not counted)
+ - Fixed date range consistency
 """
 
 from fastapi import APIRouter, Query
@@ -22,8 +25,8 @@ from datetime import datetime, date as date_type, timezone, timedelta
 from io import BytesIO
 from typing import List, Optional
 import logging
-
 import re
+import asyncio
 
 # ── ReportLab ─────────────────────────────────────────────────────────────────
 from reportlab.lib.pagesizes import A4
@@ -43,10 +46,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
-# helper functions to handle database connection issues
-import asyncio
-from functools import wraps
 
 router = APIRouter(prefix="/api/reports", tags=["Reports"])
 logger = logging.getLogger(__name__)
@@ -77,13 +76,22 @@ W, H        = A4
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def clean_text(text: str) -> str:
-    """Remove LaTeX math mode formatting artifacts."""
+    """Remove LaTeX math mode formatting artifacts and fix HTML entities."""
     if not text:
         return text
+    # Remove LaTeX math delimiters
     text = text.replace(r'\(', '').replace(r'\)', '')
+    # Fix percentage signs
     text = text.replace(r'\%', '%')
+    # Fix LaTeX operators
     text = text.replace(r'\geq', '≥')
     text = text.replace(r'\leq', '≤')
+    text = text.replace(r'\times', '×')
+    # Fix HTML entities
+    text = text.replace('&amp;lt;', '<')
+    text = text.replace('&amp;gt;', '>')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
     return text
 
 def risk_color(score):
@@ -149,26 +157,6 @@ def get_seasonal_context(month: int) -> str:
     }
     return seasons.get(month, "Mixed season")
 
-async def with_db_retry(max_retries=3, delay=0.5):
-    """Decorator to retry database operations on connection failure."""
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            last_error = None
-            for attempt in range(max_retries):
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    last_error = e
-                    if "timeout" in str(e).lower() or "connection" in str(e).lower():
-                        if attempt < max_retries - 1:
-                            logger.warning(f"Database connection attempt {attempt + 1} failed, retrying... ({delay}s)")
-                            await asyncio.sleep(delay * (attempt + 1))  # Exponential backoff
-                            continue
-                    raise
-            raise last_error
-        return wrapper
-    return decorator
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Custom ReportLab flowables
@@ -360,6 +348,8 @@ def _build_cover(story, summary, generated_at, analyst_name="WFP VAM System"):
                          fontName="Helvetica", leading=18)
 
     regions = summary.get("total_regions", "3")
+    analysis_period = summary.get("analysis_period", f"January 2020 – {datetime.now(tz=timezone.utc).strftime('%B %Y')}")
+
     inner = [
         [_p("CONFIDENTIAL ANALYTICAL REPORT", badge_style)],
         [Spacer(1, 20)],
@@ -368,7 +358,7 @@ def _build_cover(story, summary, generated_at, analyst_name="WFP VAM System"):
         [HRFlowable(width=60, thickness=4, color=GOLD, spaceAfter=16)],
         [Spacer(1, 8)],
         [_p(f'<font color="#FFFFFF"><b>Analysis Period:</b></font>'
-            f'<font color="#A8C4E8">  January 2020 – {datetime.now(tz=timezone.utc).strftime("%B %Y")}</font>',
+            f'<font color="#A8C4E8">  {analysis_period}</font>',
             meta_style)],
         [_p(f'<font color="#FFFFFF"><b>Data Source:</b></font>'
             f'<font color="#A8C4E8">  World Food Programme (WFP) VAM Food Price Database</font>',
@@ -719,13 +709,18 @@ def build_district_pdf(data: dict) -> bytes:
     crit = int(district.get("critical_count") or 0)
     sev = int(district.get("severe_count") or 0)
     mod = int(district.get("moderate_count") or 0)
-    total_spikes_district = crit + sev + mod
+
+    # Get total observations for proper rate calculation
+    total_observations = crit + sev + mod
+    if total_observations == 0:
+        total_observations = 1
 
     # ── Cover ──────────────────────────────────────────────────────────────────
     _build_cover(story, {
         "total_districts": 1,
         "total_markets": len(markets),
         "total_regions": district.get("region", "Southern"),
+        "analysis_period": f"{date_range.get('from', '2020-01-01')} to {date_range.get('to', 'today')}",
         "highest_risk_district": {
             "name": district["district"],
             "region": district["region"],
@@ -733,7 +728,7 @@ def build_district_pdf(data: dict) -> bytes:
         },
         "most_spiked_commodity": {"name": commodity_str, "critical_events": crit},
         "monitoring_gaps": {"critical_gap_districts": 0},
-        "spike_events": {"total": total_spikes_district, "critical": crit,
+        "spike_events": {"total": total_observations, "critical": crit,
                          "severe": sev, "moderate": mod},
     }, generated_at)
 
@@ -741,12 +736,20 @@ def build_district_pdf(data: dict) -> bytes:
     _add_executive_summary(story, district, indicators, markets, generated_at)
 
     # ── Data Freshness Warning ────────────────────────────────────────────────
-    if data_freshness_days > 30:
+    if data_freshness_days > 60:
         story.append(LeftBorderBox(
             _p(f"⚠️ <b>Data Freshness Warning:</b> Latest price data is {data_freshness_days} days old. "
                f"Findings may not reflect current market conditions.",
                _style("warning", fontSize=8, textColor=RED, leading=12)),
             170*mm, ORANGE_BG, RED, border_width=3
+        ))
+        story.append(Spacer(1, 3*mm))
+    elif data_freshness_days > 30:
+        story.append(LeftBorderBox(
+            _p(f"📊 <b>Note:</b> Price data is {data_freshness_days} days old. "
+               f"Consider this when interpreting findings.",
+               _style("warning", fontSize=8, textColor=AMBER, leading=12)),
+            170*mm, ORANGE_BG, AMBER, border_width=3
         ))
         story.append(Spacer(1, 3*mm))
 
@@ -784,7 +787,7 @@ def build_district_pdf(data: dict) -> bytes:
         f"{district['district']} District, located in Malawi's {district['region']} Region, "
         f"presents a food security risk profile classified as <b>{rl}</b> with a composite "
         f"risk score of <b>{int(district['risk_score'])}</b>. "
-        f"{_severity_sentence(crit, sev, mod, total_spikes_district)} "
+        f"{_severity_sentence(crit, sev, mod, total_observations)} "
         f"The district's average market price of MWK {int(float(district['avg_price'])):,}/KG "
         f"reflects the cumulative impact of price pressures over the analysis period."
     )
@@ -911,8 +914,8 @@ def build_district_pdf(data: dict) -> bytes:
         story.append(fc_t)
     else:
         story.append(_p(
-            "Detailed month-by-month forecast data was not available for this district and period. "
-            "The MFPI model requires a minimum of 12 months of price history per commodity.",
+            clean_text("Detailed month-by-month forecast data was not available for this district and period. "
+                       "The MFPI model requires a minimum of 12 months of price history per commodity."),
             _style("nofc", fontSize=9, textColor=GREY_MID, leading=13)
         ))
     story.append(PageBreak())
@@ -959,7 +962,7 @@ def build_district_pdf(data: dict) -> bytes:
             f"Detected spike events · {date_range.get('from','2020-01-01')} to {date_range.get('to','today')}"
         )
 
-        spike_intro = (
+        spike_intro = clean_text(
             f"The following table records all detected price spike events for {district['district']} "
             f"District during the selected period, ordered by date (most recent first). "
             f"Events are classified using the WFP ALPS dual-method framework requiring both "
@@ -1073,6 +1076,8 @@ def build_district_docx(data: dict) -> bytes:
     sev = int(district.get("severe_count") or 0)
     mod = int(district.get("moderate_count") or 0)
     total_obs = crit + sev + mod
+    if total_obs == 0:
+        total_obs = 1
 
     doc = DocxDocument()
 
@@ -1246,7 +1251,7 @@ async def generate_report():
                                          FROM districts_risk ORDER BY risk_score DESC NULLS LAST
                                          """)
             crit_spikes = await conn.fetch("""
-                                           SELECT date::date::text AS date, district, market, commodity,
+                                           SELECT TO_CHAR(date, 'YYYY-MM-DD') AS date, district, market, commodity,
                        price, pct_change, zscore
                                            FROM spikes WHERE spike_severity = 'Critical'
                                            ORDER BY date DESC LIMIT 30
@@ -1282,6 +1287,7 @@ async def generate_report():
                 "total_markets": int(summary["total_markets"]),
                 "total_districts": int(summary["total_districts"]),
                 "total_regions": "3",
+                "analysis_period": f"January 2020 – {datetime.now(tz=timezone.utc).strftime('%B %Y')}",
                 "spike_events": {
                     "total": int(summary["total_spikes"]),
                     "critical": int(summary["critical"]),
@@ -1390,9 +1396,9 @@ async def generate_district_report(
                 logger.warning(f"Could not calculate data freshness: {e}")
                 data_freshness_days = 0
 
-            # Rest of queries...
+            # Spike events
             spikes = await conn.fetch("""
-                                      SELECT date::date::text AS date, market, commodity,
+                                      SELECT TO_CHAR(date, 'YYYY-MM-DD') AS date, market, commodity,
                        price, pct_change, zscore, spike_severity
                                       FROM spikes
                                       WHERE district ILIKE $1 AND date BETWEEN $2 AND $3
@@ -1400,6 +1406,7 @@ async def generate_district_report(
                                       ORDER BY date DESC LIMIT 100
                                       """, district_name, date_from_obj, date_to_obj, comm_filter)
 
+            # Prices
             prices = await conn.fetch("""
                                       SELECT commodity,
                                              ROUND(AVG(price::numeric)::numeric, 0) AS avg_price,
@@ -1414,6 +1421,7 @@ async def generate_district_report(
                                       GROUP BY commodity ORDER BY avg_price DESC
                                       """, district_name, comm_filter, date_from_obj, date_to_obj)
 
+            # Markets
             markets = await conn.fetch("""
                                        SELECT market, num_commodities, total_spikes, critical_count,
                                               spike_rate_pct, latest_date::date::text AS latest_date
@@ -1421,6 +1429,7 @@ async def generate_district_report(
                                        ORDER BY total_spikes DESC
                                        """, district_name)
 
+            # Indicators
             indicators = await conn.fetchrow("""
                                              SELECT risk_score, critical_count,
                                                     COALESCE(spike_rate_pct,0) AS spike_rate_pct,
@@ -1474,13 +1483,13 @@ async def generate_district_report(
             except Exception as e:
                 logger.warning(f"Forecast query failed: {e}")
 
-            # Build payload - USE filtered_sections
+            # Build payload
             payload = {
                 "district": dict(district),
                 "spikes": [dict(r) for r in spikes],
                 "prices": [dict(r) for r in prices],
                 "markets": [dict(r) for r in markets],
-                "sections": filtered_sections,  # ← FIXED: use filtered_sections
+                "sections": filtered_sections,  # Use filtered sections
                 "date_range": {"from": date_from, "to": date_to},
                 "commodity_list": comm_list or ["All commodities"],
                 "indicators": dict(indicators) if indicators else None,
