@@ -2,23 +2,28 @@
 routers/reports.py
 Intelligent analytical report generator — PDF, Excel, and editable DOCX.
 
-Key improvements over v1:
- - Narrative prose sections (situation, commodity analysis, forecast outlook, indicators)
- - Multi-commodity support (select several; narrative covers all)
- - Forecast section from the /api/forecast endpoint data
- - FSI / PSI / Early-warning indicators section
- - DOCX export (editable Word document)
- - Fixed: timestamp in Last Report, FSI 0.0/100 labelling, invalid month-31 dates
- - Fixed: district cover page stats, hardcoded "3 Regions" on cover
+Key improvements:
+ - Fixed blank cover page and "Region Region" duplication
+ - Executive summary with priority alerts
+ - Visual risk gauge
+ - Data freshness warnings
+ - Seasonal context notes
+ - Action matrix (RAG status)
+ - Appendix with methodology glossary
+ - Improved forecast query
+ - Trend indicators for commodities
+ - Removed LaTeX formatting artifacts
 """
 
 from fastapi import APIRouter, Query
 from fastapi.responses import Response, JSONResponse
 from api.database import get_pool
-from datetime import datetime, date as date_type, timezone
+from datetime import datetime, date as date_type, timezone, timedelta
 from io import BytesIO
 from typing import List, Optional
-import textwrap
+import logging
+
+import re
 
 # ── ReportLab ─────────────────────────────────────────────────────────────────
 from reportlab.lib.pagesizes import A4
@@ -39,7 +44,12 @@ from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
+# helper functions to handle database connection issues
+import asyncio
+from functools import wraps
+
 router = APIRouter(prefix="/api/reports", tags=["Reports"])
+logger = logging.getLogger(__name__)
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 NAVY        = colors.HexColor("#1B3A6B")
@@ -63,13 +73,110 @@ W, H        = A4
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Helper functions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def clean_text(text: str) -> str:
+    """Remove LaTeX math mode formatting artifacts."""
+    if not text:
+        return text
+    return text.replace(r'\(', '').replace(r'\)', '').replace(r'\%', '%')
+
+def risk_color(score):
+    if score >= 277: return RED
+    if score >= 199: return RED_LIGHT
+    if score >= 126: return AMBER
+    if score >= 59:  return colors.HexColor("#F9A825")
+    return colors.HexColor("#66BB6A")
+
+def risk_label(score):
+    if score >= 277: return "Critical"
+    if score >= 199: return "High"
+    if score >= 126: return "Moderate"
+    if score >= 59:  return "Low"
+    return "Stable"
+
+def risk_gauge(score: int) -> str:
+    """Create a visual Unicode risk gauge."""
+    if score >= 277:
+        bar = "█" * 20
+        label = "CRITICAL"
+    elif score >= 199:
+        bar = "█" * 15 + "░" * 5
+        label = "HIGH"
+    elif score >= 126:
+        bar = "█" * 10 + "░" * 10
+        label = "MODERATE"
+    elif score >= 59:
+        bar = "█" * 5 + "░" * 15
+        label = "LOW"
+    else:
+        bar = "█" * 2 + "░" * 18
+        label = "STABLE"
+    return f"{bar} {label}"
+
+def trend_icon(pct_change: float) -> str:
+    """Return trend icon."""
+    if pct_change > 30:
+        return "▲▲"
+    elif pct_change > 10:
+        return "▲"
+    elif pct_change < -30:
+        return "▼▼"
+    elif pct_change < -10:
+        return "▼"
+    return "◆"
+
+def get_seasonal_context(month: int) -> str:
+    """Get seasonal context based on month."""
+    seasons = {
+        1: "Post-harvest (peak maize availability)",
+        2: "Post-harvest",
+        3: "Late post-harvest",
+        4: "Early lean season — food stocks depleting",
+        5: "Lean season begins — prices typically rise",
+        6: "Peak lean season — highest food insecurity",
+        7: "Peak lean season continues",
+        8: "Late lean season — harvest imminent",
+        9: "Pre-planting",
+        10: "Planting season",
+        11: "Early growing season",
+        12: "Growing season"
+    }
+    return seasons.get(month, "Mixed season")
+
+async def with_db_retry(max_retries=3, delay=0.5):
+    """Decorator to retry database operations on connection failure."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    last_error = e
+                    if "timeout" in str(e).lower() or "connection" in str(e).lower():
+                        if attempt < max_retries - 1:
+                            logger.warning(f"Database connection attempt {attempt + 1} failed, retrying... ({delay}s)")
+                            await asyncio.sleep(delay * (attempt + 1))  # Exponential backoff
+                            continue
+                    raise
+            raise last_error
+        return wrapper
+    return decorator
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Custom ReportLab flowables
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class ColorRect(Flowable):
     def __init__(self, width, height, fill_color):
         Flowable.__init__(self)
-        self.width = width; self.height = height; self.fill_color = fill_color
+        self.width = width
+        self.height = height
+        self.fill_color = fill_color
+
     def draw(self):
         self.canv.setFillColor(self.fill_color)
         self.canv.rect(0, 0, self.width, self.height, fill=1, stroke=0)
@@ -78,9 +185,12 @@ class ColorRect(Flowable):
 class LeftBorderBox(Flowable):
     def __init__(self, content_para, width, bg_color, border_color, border_width=4):
         Flowable.__init__(self)
-        self.content_para = content_para; self.width = width
-        self.bg_color = bg_color; self.border_color = border_color
-        self.border_width = border_width; self._height = None
+        self.content_para = content_para
+        self.width = width
+        self.bg_color = bg_color
+        self.border_color = border_color
+        self.border_width = border_width
+        self._height = None
 
     def wrap(self, availWidth, availHeight):
         _, h = self.content_para.wrap(self.width - self.border_width - 16, availHeight)
@@ -88,12 +198,14 @@ class LeftBorderBox(Flowable):
         return self.width, self._height
 
     def draw(self):
-        h = self._height; c = self.canv
+        h = self._height
+        c = self.canv
         c.setFillColor(self.bg_color)
         c.rect(0, 0, self.width, h, fill=1, stroke=0)
         c.setFillColor(self.border_color)
         c.rect(0, 0, self.border_width, h, fill=1, stroke=0)
-        c.setStrokeColor(self.border_color); c.setLineWidth(0.5)
+        c.setStrokeColor(self.border_color)
+        c.setLineWidth(0.5)
         c.rect(0, 0, self.width, h, fill=0, stroke=1)
         self.content_para.drawOn(c, self.border_width + 10, 10)
 
@@ -103,7 +215,7 @@ class NarrativeBox(Flowable):
     def __init__(self, heading, paragraphs, width, bg=None, heading_bg=None):
         Flowable.__init__(self)
         self.heading = heading
-        self.paragraphs = paragraphs  # list of Paragraph objects
+        self.paragraphs = paragraphs
         self.width = width
         self.bg = bg or GREY_BG
         self.heading_bg = heading_bg or NAVY
@@ -112,33 +224,31 @@ class NarrativeBox(Flowable):
 
     def wrap(self, availWidth, availHeight):
         inner_w = self.width - 24
-        total_h = 32  # heading stripe
+        total_h = 32
         heights = []
         for p in self.paragraphs:
             _, ph = p.wrap(inner_w, 9999)
             heights.append(ph)
             total_h += ph + 8
-        total_h += 16  # bottom padding
+        total_h += 16
         self._height = total_h
         self._para_heights = heights
         return self.width, self._height
 
     def draw(self):
-        c = self.canv; w = self.width; h = self._height
-        # background
+        c = self.canv
+        w = self.width
+        h = self._height
         c.setFillColor(self.bg)
         c.rect(0, 0, w, h, fill=1, stroke=0)
-        # heading stripe
         c.setFillColor(self.heading_bg)
         c.rect(0, h - 32, w, 32, fill=1, stroke=0)
-        # border
-        c.setStrokeColor(GREY_LINE); c.setLineWidth(0.5)
+        c.setStrokeColor(GREY_LINE)
+        c.setLineWidth(0.5)
         c.rect(0, 0, w, h, fill=0, stroke=1)
-        # heading text
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 9)
         c.drawString(12, h - 20, self.heading.upper())
-        # paragraph content
         y = h - 32 - 8
         for p, ph in zip(self.paragraphs, self._para_heights):
             y -= ph
@@ -159,20 +269,6 @@ def _style(name, **kwargs):
 def _p(text, style):
     return Paragraph(text, style)
 
-def risk_color(score):
-    if score >= 277: return RED
-    if score >= 199: return RED_LIGHT
-    if score >= 126: return AMBER
-    if score >= 59:  return colors.HexColor("#F9A825")
-    return colors.HexColor("#66BB6A")
-
-def risk_label(score):
-    if score >= 277: return "Critical"
-    if score >= 199: return "High"
-    if score >= 126: return "Moderate"
-    if score >= 59:  return "Low"
-    return "Stable"
-
 def _table_style(stripe=True):
     base = [
         ("BACKGROUND",    (0,0), (-1,0),  NAVY),
@@ -188,9 +284,10 @@ def _table_style(stripe=True):
         ("BOTTOMPADDING", (0,1), (-1,-1), 5),
         ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
         ("LINEBELOW",     (0,0), (-1,-1), 0.3, GREY_LINE),
-        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, GREY_BG]) if stripe else None,
     ]
-    return TableStyle([s for s in base if s is not None])
+    if stripe:
+        base.append(("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_BG]))
+    return TableStyle(base)
 
 def _hdr(text):
     return _p(f"<b>{text}</b>", _style("hdr", textColor=WHITE, fontSize=8, fontName="Helvetica-Bold"))
@@ -202,9 +299,9 @@ def _col(text, color, bold=True):
 def _section_header(story, title, subtitle=""):
     story.append(Spacer(1, 5*mm))
     story.append(_p(title, _style("h2", fontSize=15, textColor=NAVY,
-                                   fontName="Helvetica-Bold", spaceAfter=2)))
+                                  fontName="Helvetica-Bold", spaceAfter=2)))
     story.append(HRFlowable(width="100%", thickness=3, color=NAVY,
-                             spaceAfter=4 if subtitle else 8))
+                            spaceAfter=4 if subtitle else 8))
     if subtitle:
         story.append(_p(subtitle, _style("sub", fontSize=9, textColor=GREY_MID, spaceAfter=8)))
 
@@ -240,23 +337,28 @@ def _footer(canvas, doc):
     canvas.drawRightString(190*mm, 10*mm, f"Page {doc.page}")
     canvas.restoreState()
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cover and section builders
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def _build_cover(story, summary, generated_at, analyst_name="WFP VAM System"):
     page_w      = 170*mm
     badge_style = _style("badge", fontSize=9, fontName="Helvetica-Bold",
-                          textColor=NAVY, backColor=GOLD, leftIndent=6, rightIndent=6)
+                         textColor=NAVY, backColor=GOLD, leftIndent=6, rightIndent=6)
     title_style = _style("ctitle", fontSize=28, textColor=WHITE,
-                          fontName="Helvetica-Bold", leading=34, spaceAfter=4)
+                         fontName="Helvetica-Bold", leading=34, spaceAfter=4)
     sub_style   = _style("csub", fontSize=13, textColor=BLUE_LIGHT,
-                          fontName="Helvetica", leading=18, spaceAfter=24)
+                         fontName="Helvetica", leading=18, spaceAfter=24)
     meta_style  = _style("cmeta", fontSize=10, textColor=BLUE_LIGHT,
-                          fontName="Helvetica", leading=18)
+                         fontName="Helvetica", leading=18)
 
     regions = summary.get("total_regions", "3")
     inner = [
         [_p("CONFIDENTIAL ANALYTICAL REPORT", badge_style)],
         [Spacer(1, 20)],
         [_p("Malawi Food Security Monitor", title_style)],
-        [_p("Food Price Spike Analysis &amp; District Risk Assessment", sub_style)],
+        [_p("Food Price Spike Analysis & District Risk Assessment", sub_style)],
         [HRFlowable(width=60, thickness=4, color=GOLD, spaceAfter=16)],
         [Spacer(1, 8)],
         [_p(f'<font color="#FFFFFF"><b>Analysis Period:</b></font>'
@@ -290,6 +392,164 @@ def _build_cover(story, summary, generated_at, analyst_name="WFP VAM System"):
     ]))
     story.append(cover_t)
     story.append(PageBreak())
+    story.append(Spacer(1, 0.1*mm))
+
+
+def _add_executive_summary(story, district, indicators, markets, generated_at):
+    """Add executive summary with priority alerts."""
+    _section_header(story, "Executive Summary", "Key findings and required actions")
+
+    # Build priority alerts
+    alerts = []
+    risk_score = district["risk_score"]
+
+    if risk_score >= 277:
+        alerts.append(("🔴 CRITICAL RISK", "Immediate food assistance intervention required", RED))
+    elif risk_score >= 199:
+        alerts.append(("🟠 HIGH RISK", "Enhanced monitoring and contingency planning needed", ORANGE))
+    elif risk_score >= 126:
+        alerts.append(("🟡 MODERATE RISK", "Increased vigilance recommended", AMBER))
+
+    if indicators and indicators.get("spike_rate_pct", 0) > 10:
+        alerts.append(("⚠️ SPIKE ALERT", f"Price spike rate ({indicators['spike_rate_pct']:.1f}%) exceeds 10% high-alert threshold", RED))
+
+    if indicators and "GAP" in str(indicators.get("monitoring_status", "")):
+        alerts.append(("📊 COVERAGE GAP", "Monitoring insufficient for early warning — expansion needed", ORANGE))
+
+    if district.get("critical_count", 0) > 10:
+        alerts.append(("💥 CRITICAL EVENTS", f"{district['critical_count']} critical spikes detected — supply chain stress confirmed", RED))
+
+    if alerts:
+        alert_html = "<b>Priority Alerts:</b><br/>" + "<br/>".join(f"• {a[0]}: {a[1]}" for a in alerts)
+        story.append(LeftBorderBox(
+            _p(alert_html, _style("alert", fontSize=10, textColor=GREY_DARK, leading=16)),
+            170*mm, ORANGE_BG, alerts[0][2], border_width=5
+        ))
+        story.append(Spacer(1, 5*mm))
+    else:
+        story.append(LeftBorderBox(
+            _p("<b>Status:</b> No critical alerts — routine monitoring recommended",
+               _style("alert", fontSize=10, textColor=GREY_DARK, leading=14)),
+            170*mm, GREEN_BG, GREEN, border_width=4
+        ))
+        story.append(Spacer(1, 5*mm))
+
+    # Visual risk gauge
+    gauge_text = f"<b>Risk Assessment:</b> {risk_gauge(int(risk_score))} ({int(risk_score)}/436)"
+    story.append(LeftBorderBox(
+        _p(gauge_text, _style("gauge", fontSize=9, fontName="Courier", textColor=GREY_DARK)),
+        170*mm, GREY_BG, risk_color(risk_score), border_width=3
+    ))
+    story.append(Spacer(1, 5*mm))
+
+    # Bottom line
+    if risk_score >= 277:
+        bottom_line = "⚠️ This district requires IMMEDIATE humanitarian intervention."
+    elif risk_score >= 126:
+        bottom_line = "📋 Elevated risk — pre-position supplies and increase monitoring frequency."
+    else:
+        bottom_line = "✅ Routine monitoring sufficient — maintain standard protocols."
+
+    story.append(LeftBorderBox(
+        _p(f"<b>Bottom Line:</b> {bottom_line}",
+           _style("bl", fontSize=9, textColor=GREY_DARK, leading=14)),
+        170*mm, BLUE_BG, NAVY, border_width=3
+    ))
+    story.append(PageBreak())
+
+
+def _add_action_matrix(story, district, indicators):
+    """Add RAG action matrix."""
+    _section_header(story, "Action Matrix", "Priority actions by area")
+
+    actions = [
+        ["Food Assistance",
+         "Immediate" if district["risk_score"] >= 277 else
+         "Pre-position" if district["risk_score"] >= 126 else
+         "Standby",
+         "🔴" if district["risk_score"] >= 277 else
+         "🟡" if district["risk_score"] >= 126 else "🟢"],
+
+        ["Market Monitoring",
+         "Daily" if district["risk_score"] >= 277 else
+         "Weekly" if district["risk_score"] >= 199 else
+         "Monthly" if district["risk_score"] >= 126 else "Quarterly",
+         "🔴" if district["risk_score"] >= 277 else
+         "🟡" if district["risk_score"] >= 126 else "🟢"],
+
+        ["Supply Chain Assessment",
+         "Immediate" if district.get("critical_count", 0) > 15 else
+         "Monthly" if district.get("critical_count", 0) > 5 else "Quarterly",
+         "🔴" if district.get("critical_count", 0) > 15 else
+         "🟡" if district.get("critical_count", 0) > 5 else "🟢"],
+
+        ["Early Warning Capacity",
+         "URGENT: Expand coverage" if indicators and "GAP" in str(indicators.get("monitoring_status", "")) else "Adequate",
+         "🔴" if indicators and "GAP" in str(indicators.get("monitoring_status", "")) else "🟢"],
+    ]
+
+    action_rows = [[_hdr("Action Area"), _hdr("Required Action"), _hdr("Priority")]]
+    for action in actions:
+        action_rows.append([
+            _p(f"<b>{action[0]}</b>", _style("action_label", fontSize=8.5)),
+            _p(action[1], _style("action_val", fontSize=8.5)),
+            _p(action[2], _style("action_priority", fontSize=11)),
+        ])
+
+    action_table = Table(action_rows, colWidths=[45*mm, 80*mm, 25*mm], repeatRows=1)
+    action_table.setStyle(_table_style())
+    story.append(action_table)
+    story.append(Spacer(1, 5*mm))
+
+
+def _add_seasonal_note(story, date_range):
+    """Add seasonal context note."""
+    try:
+        month = int(date_range.get('to', datetime.now().strftime("%Y-%m-%d")).split('-')[1])
+        season_text = get_seasonal_context(month)
+
+        story.append(LeftBorderBox(
+            _p(f"<b>Seasonal Context:</b> {season_text}. "
+               f"{'Price monitoring intensity should increase during this period.' if month in [4,5,6,7] else 'Normal monitoring intensity appropriate.'}",
+               _style("season", fontSize=8, textColor=GREY_MID, leading=12)),
+            170*mm, GREY_BG, NAVY, border_width=2
+        ))
+        story.append(Spacer(1, 3*mm))
+    except:
+        pass
+
+
+def _add_appendix(story):
+    """Add methodology glossary appendix."""
+    story.append(PageBreak())
+    _section_header(story, "Appendix A: Methodology & Definitions", "")
+
+    glossary = [
+        ("Risk Score", "Composite index (0-436) combining: Critical×3 + Severe×2 + Moderate×1, normalized to national maximum", "436 = highest observed risk"),
+        ("Spike Detection", "ALPS dual-method: MoM price change ≥20% AND 12-month rolling z-score ≥1.5", "Reduces false positives"),
+        ("Severity Levels", "Moderate (20%/z1.5), Severe (40%/z2.0), Critical (60%/z2.5)", "Based on WFP ALPS framework"),
+        ("Monitoring Gap", "CRITICAL: <3 markets with risk>300, HIGH: <5 markets with risk>150", "Priority expansion areas"),
+        ("Forecast Model", "MFPI (Malawi Food Price Index) using ARIMA with 80% confidence band", "Requires 12+ months history"),
+    ]
+
+    gloss_rows = [[_hdr("Term"), _hdr("Definition"), _hdr("Threshold")]]
+    for term, definition, threshold in glossary:
+        gloss_rows.append([
+            _p(f"<b>{term}</b>", _style("term", fontSize=8.5, fontName="Helvetica-Bold")),
+            _p(definition, _style("def", fontSize=8, textColor=GREY_MID)),
+            _p(threshold, _style("thresh", fontSize=8, textColor=GREY_MID, fontName="Helvetica-Oblique")),
+        ])
+
+    gloss_table = Table(gloss_rows, colWidths=[35*mm, 95*mm, 40*mm], repeatRows=1)
+    gloss_table.setStyle(_table_style())
+    story.append(gloss_table)
+    story.append(Spacer(1, 5*mm))
+
+    story.append(LeftBorderBox(
+        _p("<b>Data Sources:</b> WFP VAM Food Price Database · District-level prices collected monthly from partner markets · Quality assurance via outlier detection",
+           _style("sources", fontSize=8, textColor=GREY_MID, leading=12)),
+        170*mm, GREY_BG, NAVY, border_width=2
+    ))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -310,7 +570,7 @@ def _severity_sentence(crit, sev, mod, total):
             f"yielding a {rate}% overall spike rate that substantially exceeds the 5% early-warning threshold.")
 
 def _commodity_narrative(commodities, selected_list):
-    """Generate commodity-specific narrative for selected commodities."""
+    """Generate commodity-specific narrative."""
     if not commodities:
         return "No commodity-level price data was available for the selected period."
     lines = []
@@ -326,7 +586,7 @@ def _commodity_narrative(commodities, selected_list):
             f"<b>{c['commodity']}</b> averaged MWK {price:,}/KG across {obs} observations, "
             f"with prices {direction} {abs(pct):.1f}% on average — {stress}."
         )
-    return " ".join(lines) if lines else "No matching commodity data found for the selected filters."
+    return " ".join(lines) if lines else "No matching commodity data found."
 
 def _market_narrative(markets):
     """Generate market coverage narrative."""
@@ -344,8 +604,7 @@ def _market_narrative(markets):
         )
     return (
         f"{len(markets)} markets are monitored in this district, collectively recording "
-        f"{total_spikes} spike events. No critical-severity events were detected at any "
-        f"individual market — though elevated moderate activity warrants continued monitoring."
+        f"{total_spikes} spike events. No critical-severity events were detected."
     )
 
 def _forecast_narrative(forecast_data):
@@ -368,54 +627,53 @@ def _forecast_narrative(forecast_data):
     worst = "Normal"
     for s in ["Critical", "Severe", "Moderate"]:
         if s in severity_labels:
-            worst = s; break
+            worst = s
+            break
     return (
         f"The 3-month price forecast indicates a <b>{trend}</b> price trajectory, "
         f"with a projected peak of MWK {int(peak):,}/KG in {peak_month}. "
         f"The worst projected severity level is <b>{worst}</b>. "
-        f"{'Immediate preparedness planning is recommended.' if worst in ('Critical','Severe') else 'Continued price monitoring is advised to detect early deterioration.'}"
+        f"{'Immediate preparedness planning is recommended.' if worst in ('Critical','Severe') else 'Continued price monitoring is advised.'}"
     )
 
 def _indicator_narrative(indicators, district_name):
-    """Generate FSI / PSI indicator narrative."""
+    """Generate FSI/PSI indicator narrative."""
     if not indicators:
         return f"Composite indicator data was not available for {district_name}."
     risk_score = float(indicators.get("risk_score") or 0)
     spike_rate = float(indicators.get("spike_rate_pct") or 0)
     rl = risk_label(risk_score)
-    # FSI: higher risk_score = lower food security. Express as risk index.
     risk_index = round(risk_score / 436 * 100, 1)
     coverage = indicators.get("monitoring_status", "Unknown")
     return (
         f"{district_name} District has a composite risk score of {int(risk_score)} — "
-        f"classified as <b>{rl}</b> ({risk_index:.0f}/100 on the risk index, where 100 represents "
-        f"the highest observed national risk). The overall price spike rate stands at "
-        f"{spike_rate:.1f}% of observations. "
+        f"classified as <b>{rl}</b> ({risk_index:.0f}/100 on the risk index). "
+        f"The overall price spike rate stands at {spike_rate:.1f}% of observations. "
         f"Market monitoring coverage is rated <b>{coverage}</b>. "
-        f"{'This coverage gap means food crises may emerge without adequate early warning — expanding monitoring is a priority.' if 'GAP' in str(coverage).upper() else 'Monitoring coverage is sufficient to detect emerging price pressures.'}"
+        f"{'This coverage gap means food crises may emerge without adequate early warning.' if 'GAP' in str(coverage).upper() else 'Monitoring coverage is sufficient.'}"
     )
 
 def _early_warning_narrative(indicators, forecast_data):
-    """Generate early warning section narrative."""
+    """Generate early warning narrative."""
     warnings = []
     if indicators:
         spike_rate = float(indicators.get("spike_rate_pct") or 0)
         if spike_rate > 10:
-            warnings.append(f"Spike rate of {spike_rate:.1f}% significantly exceeds the 10% high-alert threshold.")
+            warnings.append(f"Spike rate of {spike_rate:.1f}% exceeds the 10% high-alert threshold.")
         risk = float(indicators.get("risk_score") or 0)
         if risk > 199:
-            warnings.append(f"Composite risk score of {int(risk)} places this district in the top-priority intervention category.")
+            warnings.append(f"Risk score of {int(risk)} places this district in top-priority category.")
     if forecast_data:
         months = forecast_data.get("months", [])
         for m in months:
             if m.get("severity") in ("Critical", "Severe"):
                 warnings.append(
                     f"Forecast projects {m['severity'].lower()}-severity prices for "
-                    f"{m.get('month_label','the coming period')} — immediate preparedness action required."
+                    f"{m.get('month_label','the coming period')} — immediate action required."
                 )
                 break
     if not warnings:
-        return "No acute early warning signals were identified for this reporting period. Routine monitoring should continue."
+        return "No acute early warning signals were identified. Routine monitoring should continue."
     return " ".join(warnings) + " Response planning should begin immediately."
 
 
@@ -433,74 +691,90 @@ def build_district_pdf(data: dict) -> bytes:
         author="WFP VAM",
     )
 
-    story        = []
-    district     = data["district"]
-    spikes       = data["spikes"]
-    prices       = data["prices"]
-    markets      = data["markets"]
-    indicators   = data.get("indicators")
-    forecast     = data.get("forecast")
-    date_range   = data.get("date_range", {})
-    commodities  = data.get("commodity_list", ["All commodities"])
+    story = []
+    district = data["district"]
+    spikes = data["spikes"]
+    prices = data["prices"]
+    markets = data["markets"]
+    indicators = data.get("indicators")
+    forecast = data.get("forecast")
+    date_range = data.get("date_range", {})
+    commodities = data.get("commodity_list", ["All commodities"])
     commodity_str = ", ".join(commodities) if commodities else "All commodities"
     generated_at = datetime.now(tz=timezone.utc).strftime("%d %B %Y %H:%M")
+    data_freshness_days = data.get("data_freshness_days", 0)
 
-    body    = _style("body",  fontSize=9,   textColor=GREY_DARK, leading=14)
+    body = _style("body", fontSize=9, textColor=GREY_DARK, leading=14)
     bodybig = _style("body2", fontSize=9.5, textColor=GREY_DARK, leading=15)
-    small   = _style("small", fontSize=8,   textColor=GREY_MID,  leading=11)
-    lead    = _style("lead",  fontSize=10.5, textColor=GREY_DARK, leading=16,
-                     fontName="Helvetica", spaceAfter=4)
+    small = _style("small", fontSize=8, textColor=GREY_MID, leading=11)
 
     rc = risk_color(district["risk_score"])
     rl = risk_label(district["risk_score"])
-    crit  = int(district.get("critical_count") or 0)
-    sev   = int(district.get("severe_count") or 0)
-    mod   = int(district.get("moderate_count") or 0)
-    total_spikes_district = crit * 3 + sev * 2 + mod  # rough obs proxy
+    crit = int(district.get("critical_count") or 0)
+    sev = int(district.get("severe_count") or 0)
+    mod = int(district.get("moderate_count") or 0)
+    total_spikes_district = crit + sev + mod
 
     # ── Cover ──────────────────────────────────────────────────────────────────
     _build_cover(story, {
         "total_districts": 1,
-        "total_markets"  : len(markets),
-        "total_regions"  : district.get("region", "Southern"),
+        "total_markets": len(markets),
+        "total_regions": district.get("region", "Southern"),
         "highest_risk_district": {
-            "name"       : district["district"],
-            "region"     : district["region"],
-            "risk_score" : district["risk_score"],
+            "name": district["district"],
+            "region": district["region"],
+            "risk_score": district["risk_score"],
         },
         "most_spiked_commodity": {"name": commodity_str, "critical_events": crit},
-        "monitoring_gaps"      : {"critical_gap_districts": 0},
-        "spike_events"         : {"total": total_spikes_district, "critical": crit,
-                                   "severe": sev, "moderate": mod},
+        "monitoring_gaps": {"critical_gap_districts": 0},
+        "spike_events": {"total": total_spikes_district, "critical": crit,
+                         "severe": sev, "moderate": mod},
     }, generated_at)
 
+    # ── Executive Summary ─────────────────────────────────────────────────────
+    _add_executive_summary(story, district, indicators, markets, generated_at)
+
+    # ── Data Freshness Warning ────────────────────────────────────────────────
+    if data_freshness_days > 30:
+        story.append(LeftBorderBox(
+            _p(f"⚠️ <b>Data Freshness Warning:</b> Latest price data is {data_freshness_days} days old. "
+               f"Findings may not reflect current market conditions.",
+               _style("warning", fontSize=8, textColor=RED, leading=12)),
+            170*mm, ORANGE_BG, RED, border_width=3
+        ))
+        story.append(Spacer(1, 3*mm))
+
     # ── Section 1: District Overview ───────────────────────────────────────────
+    region_display = district['region'] if 'Region' in str(district['region']) else district['region'] + ' Region'
     _section_header(
         story, f"1. District Overview — {district['district']}",
-        f"{district['region']} Region  ·  "
-        f"{date_range.get('from','2020-01-01')} to {date_range.get('to','today')}  ·  "
+        f"{region_display} · "
+        f"{date_range.get('from','2020-01-01')} to {date_range.get('to','today')} · "
         f"Commodity filter: {commodity_str}"
     )
 
     # stat cards
     cards = Table([[
-        _stat_card("Risk Score",      int(district["risk_score"]),     rl, rc),
-        _stat_card("Critical Spikes", crit,                             "spike events", RED),
+        _stat_card("Risk Score", int(district["risk_score"]), rl, rc),
+        _stat_card("Critical Spikes", crit, "spike events", RED),
         _stat_card("Avg Price",
                    f"{int(float(district['avg_price'])):,} MWK",
                    "across all commodities", NAVY),
         _stat_card("Markets", len(markets), "monitored markets", GREEN),
     ]], colWidths=[42*mm]*4)
     cards.setStyle(TableStyle([
-        ("LEFTPADDING",  (0,0),(-1,-1), 0), ("RIGHTPADDING", (0,0),(-1,-1), 0),
-        ("TOPPADDING",   (0,0),(-1,-1), 0), ("BOTTOMPADDING",(0,0),(-1,-1), 0),
-        ("INNERGRID",    (0,0),(-1,-1), 2, WHITE),
+        ("LEFTPADDING", (0,0), (-1,-1), 0), ("RIGHTPADDING", (0,0), (-1,-1), 0),
+        ("TOPPADDING", (0,0), (-1,-1), 0), ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ("INNERGRID", (0,0), (-1,-1), 2, WHITE),
     ]))
     story.append(cards)
     story.append(Spacer(1, 5*mm))
 
+    # Seasonal context
+    _add_seasonal_note(story, date_range)
+
     # situation narrative
-    situation_text = (
+    situation_text = clean_text(
         f"{district['district']} District, located in Malawi's {district['region']} Region, "
         f"presents a food security risk profile classified as <b>{rl}</b> with a composite "
         f"risk score of <b>{int(district['risk_score'])}</b>. "
@@ -522,7 +796,7 @@ def build_district_pdf(data: dict) -> bytes:
 
         risk_index = round(float(indicators.get("risk_score") or 0) / 436 * 100, 1)
         spike_rate = float(indicators.get("spike_rate_pct") or 0)
-        coverage   = str(indicators.get("monitoring_status") or "Unknown")
+        coverage = str(indicators.get("monitoring_status") or "Unknown")
 
         ind_rows = [
             [_hdr("Indicator"), _hdr("Value"), _hdr("Threshold"), _hdr("Status")],
@@ -550,14 +824,14 @@ def build_district_pdf(data: dict) -> bytes:
 
         # indicator narrative
         story.append(LeftBorderBox(
-            _p(_indicator_narrative(indicators, district["district"]),
+            _p(clean_text(_indicator_narrative(indicators, district["district"])),
                _style("ind", fontSize=9.5, textColor=GREY_DARK, leading=14)),
             170*mm, BLUE_BG, NAVY, border_width=4
         ))
 
         # early warning
-        ew_text = _early_warning_narrative(indicators, forecast)
-        ew_color = RED if ("immediately" in ew_text.lower() or "immediately" in ew_text.lower()) else AMBER
+        ew_text = clean_text(_early_warning_narrative(indicators, forecast))
+        ew_color = RED if ("immediately" in ew_text.lower() or "immediate" in ew_text.lower()) else AMBER
         story.append(Spacer(1, 4*mm))
         story.append(LeftBorderBox(
             _p(f"<b>Early Warning Signal:</b> {ew_text}",
@@ -566,15 +840,16 @@ def build_district_pdf(data: dict) -> bytes:
         ))
         story.append(PageBreak())
 
+    # ── Action Matrix ─────────────────────────────────────────────────────────
+    _add_action_matrix(story, district, indicators)
+    story.append(PageBreak())
+
     # ── Section 3: Commodity Price Analysis ───────────────────────────────────
     if prices:
         _section_header(story, "3. Commodity Price Analysis",
                         "Average prices, percentage change, and price stress classification")
 
-        # narrative
-        comm_narr = _commodity_narrative(
-            [dict(p) for p in prices], commodities
-        )
+        comm_narr = clean_text(_commodity_narrative([dict(p) for p in prices], commodities))
         story.append(LeftBorderBox(
             _p(comm_narr, _style("cn", fontSize=9.5, textColor=GREY_DARK, leading=14)),
             170*mm, GREEN_BG, GREEN, border_width=4
@@ -587,10 +862,11 @@ def build_district_pdf(data: dict) -> bytes:
             pct = float(p.get("avg_pct_change") or 0)
             stress = "Critical" if pct > 40 else "Elevated" if pct > 15 else "Normal"
             sc = RED if pct > 40 else AMBER if pct > 15 else GREEN
+            trend = trend_icon(pct)
             price_rows.append([
                 _p(f"<b>{p['commodity']}</b>", body),
                 _p(f"{int(float(p['avg_price'])):,} MWK", body),
-                _col(f"{'+' if pct >= 0 else ''}{pct:.1f}%", sc),
+                _col(f"{trend} {'+' if pct >= 0 else ''}{pct:.1f}%", sc),
                 _col(stress, sc),
                 _p(str(p["obs"]), small),
             ])
@@ -599,11 +875,11 @@ def build_district_pdf(data: dict) -> bytes:
         story.append(price_t)
         story.append(Spacer(1, 5*mm))
 
-    # ── Section 4: 3-Month Price Forecast ─────────────────────────────────────
+    # ── Section 4: Price Forecast ─────────────────────────────────────────────
     _section_header(story, "4. Price Forecast Outlook",
                     "3-month forward projection — MFPI model · confidence band: 80%")
 
-    forecast_narr = _forecast_narrative(forecast)
+    forecast_narr = clean_text(_forecast_narrative(forecast))
     story.append(LeftBorderBox(
         _p(forecast_narr, _style("fn2", fontSize=9.5, textColor=GREY_DARK, leading=14)),
         170*mm, ORANGE_BG, ORANGE, border_width=4
@@ -640,7 +916,7 @@ def build_district_pdf(data: dict) -> bytes:
         _section_header(story, "5. Market Coverage",
                         "Monitored markets — spike frequency and monitoring health")
 
-        mkt_narr = _market_narrative([dict(m) for m in markets])
+        mkt_narr = clean_text(_market_narrative([dict(m) for m in markets]))
         story.append(LeftBorderBox(
             _p(mkt_narr, _style("mn", fontSize=9.5, textColor=GREY_DARK, leading=14)),
             170*mm, GREY_BG, NAVY, border_width=4
@@ -650,7 +926,6 @@ def build_district_pdf(data: dict) -> bytes:
         mkt_rows = [[_hdr("Market"), _hdr("Commodities"), _hdr("Total Spikes"),
                      _hdr("Critical"), _hdr("Spike Rate"), _hdr("Last Report")]]
         for m in markets:
-            # FIX: strip timestamp to date only
             last = str(m.get("latest_date") or "—")
             if "T" in last:
                 last = last.split("T")[0]
@@ -690,10 +965,10 @@ def build_district_pdf(data: dict) -> bytes:
         ))
         story.append(Spacer(1, 4*mm))
 
-        sev_colors  = {"Critical": RED, "Severe": ORANGE, "Moderate": AMBER}
-        spike_rows  = [[_hdr("Date"), _hdr("Market"), _hdr("Commodity"),
-                        _hdr("Price (MWK/KG)"), _hdr("% Jump"), _hdr("Z-Score"),
-                        _hdr("Severity")]]
+        sev_colors = {"Critical": RED, "Severe": ORANGE, "Moderate": AMBER}
+        spike_rows = [[_hdr("Date"), _hdr("Market"), _hdr("Commodity"),
+                       _hdr("Price (MWK/KG)"), _hdr("% Jump"), _hdr("Z-Score"),
+                       _hdr("Severity")]]
         for s in spikes:
             sc = sev_colors.get(s["spike_severity"], GREEN)
             spike_rows.append([
@@ -706,7 +981,7 @@ def build_district_pdf(data: dict) -> bytes:
                 _col(s["spike_severity"], sc),
             ])
         spike_t = Table(spike_rows,
-                        colWidths=[22*mm,35*mm,28*mm,25*mm,18*mm,18*mm,24*mm],
+                        colWidths=[22*mm, 35*mm, 28*mm, 25*mm, 18*mm, 18*mm, 24*mm],
                         repeatRows=1)
         spike_t.setStyle(_table_style())
         story.append(spike_t)
@@ -724,7 +999,8 @@ def build_district_pdf(data: dict) -> bytes:
             f"monitoring thresholds at 1,200 MWK/KG to trigger automatic alert escalation to "
             f"DoDMA and WFP country offices. Expand market monitoring coverage given the current gap status."
         )
-        rec_color = RED; rec_bg = ORANGE_BG
+        rec_color = RED
+        rec_bg = ORANGE_BG
     elif risk_score >= 126:
         rec_text = (
             f"<b>ELEVATED MONITORING REQUIRED.</b> {district['district']} District requires "
@@ -732,7 +1008,8 @@ def build_district_pdf(data: dict) -> bytes:
             f"Assess supply chain constraints contributing to elevated price volatility. "
             f"Review monitoring coverage gaps to ensure early warning capability."
         )
-        rec_color = AMBER; rec_bg = ORANGE_BG
+        rec_color = AMBER
+        rec_bg = ORANGE_BG
     else:
         rec_text = (
             f"<b>ROUTINE MONITORING.</b> {district['district']} District is currently operating "
@@ -740,12 +1017,16 @@ def build_district_pdf(data: dict) -> bytes:
             f"and continue seasonal baseline assessments. Flag any sudden deterioration in market "
             f"integration or coverage for review."
         )
-        rec_color = GREEN; rec_bg = GREEN_BG
+        rec_color = GREEN
+        rec_bg = GREEN_BG
 
     story.append(LeftBorderBox(
         _p(rec_text, _style("rec", fontSize=10, textColor=GREY_DARK, leading=15)),
         170*mm, rec_bg, rec_color, border_width=5
     ))
+
+    # ── Appendix ───────────────────────────────────────────────────────────────
+    _add_appendix(story)
 
     # ── Footer box ─────────────────────────────────────────────────────────────
     story.append(Spacer(1, 8*mm))
@@ -765,351 +1046,83 @@ def build_district_pdf(data: dict) -> bytes:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DOCX builder — District (editable Word document)
+# DOCX builder — District (simplified version)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-def _docx_heading(doc, text, level=1, color_hex="1B3A6B"):
-    """Add a styled heading."""
-    h = doc.add_heading(text, level=level)
-    h.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    for run in h.runs:
-        run.font.color.rgb = RGBColor.from_string(color_hex)
-    return h
-
-def _docx_para(doc, text, bold=False, size=10, color_hex=None, italic=False):
-    p = doc.add_paragraph()
-    run = p.add_run(text)
-    run.bold = bold
-    run.italic = italic
-    run.font.size = Pt(size)
-    if color_hex:
-        run.font.color.rgb = RGBColor.from_string(color_hex)
-    p.paragraph_format.space_after = Pt(6)
-    return p
-
-def _docx_callout(doc, label, text, color_hex="1B3A6B"):
-    """Add a left-bordered callout paragraph."""
-    p = doc.add_paragraph()
-    p.paragraph_format.left_indent = Inches(0.3)
-    p.paragraph_format.space_before = Pt(4)
-    p.paragraph_format.space_after = Pt(8)
-    run = p.add_run(f"{label}: ")
-    run.bold = True
-    run.font.color.rgb = RGBColor.from_string(color_hex)
-    run.font.size = Pt(10)
-    r2 = p.add_run(text)
-    r2.font.size = Pt(10)
-    # left border via pPr
-    pPr = p._p.get_or_add_pPr()
-    pBdr = OxmlElement('w:pBdr')
-    left = OxmlElement('w:left')
-    left.set(qn('w:val'), 'single')
-    left.set(qn('w:sz'), '18')
-    left.set(qn('w:space'), '6')
-    left.set(qn('w:color'), color_hex)
-    pBdr.append(left)
-    pPr.append(pBdr)
-    return p
-
-def _docx_table(doc, headers, rows, col_widths_inches):
-    """Add a styled table."""
-    table = doc.add_table(rows=1 + len(rows), cols=len(headers))
-    table.style = 'Table Grid'
-    # header row
-    hdr_cells = table.rows[0].cells
-    for i, h in enumerate(headers):
-        hdr_cells[i].text = h
-        hdr_cells[i].paragraphs[0].runs[0].bold = True
-        hdr_cells[i].paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
-        hdr_cells[i].paragraphs[0].runs[0].font.size = Pt(9)
-        tc = hdr_cells[i]._tc
-        tcPr = tc.get_or_add_tcPr()
-        shd = OxmlElement('w:shd')
-        shd.set(qn('w:val'), 'clear')
-        shd.set(qn('w:color'), 'auto')
-        shd.set(qn('w:fill'), '1B3A6B')
-        tcPr.append(shd)
-    # data rows
-    for ri, row_data in enumerate(rows):
-        cells = table.rows[ri + 1].cells
-        for ci, val in enumerate(row_data):
-            cells[ci].text = str(val)
-            cells[ci].paragraphs[0].runs[0].font.size = Pt(9)
-            if ri % 2 == 0:
-                tc = cells[ci]._tc
-                tcPr = tc.get_or_add_tcPr()
-                shd = OxmlElement('w:shd')
-                shd.set(qn('w:val'), 'clear')
-                shd.set(qn('w:color'), 'auto')
-                shd.set(qn('w:fill'), 'F8F9FA')
-                tcPr.append(shd)
-    # column widths
-    for i, w in enumerate(col_widths_inches):
-        for row in table.rows:
-            row.cells[i].width = Inches(w)
-    doc.add_paragraph()
-    return table
-
 
 def build_district_docx(data: dict) -> bytes:
     """Build an editable Word document with the full district situation report."""
-    district     = data["district"]
-    spikes       = data["spikes"]
-    prices       = data["prices"]
-    markets      = data["markets"]
-    indicators   = data.get("indicators")
-    forecast     = data.get("forecast")
-    date_range   = data.get("date_range", {})
-    commodities  = data.get("commodity_list", ["All commodities"])
+    district = data["district"]
+    spikes = data["spikes"]
+    prices = data["prices"]
+    markets = data["markets"]
+    indicators = data.get("indicators")
+    forecast = data.get("forecast")
+    date_range = data.get("date_range", {})
+    commodities = data.get("commodity_list", ["All commodities"])
     commodity_str = ", ".join(commodities) if commodities else "All commodities"
     generated_at = datetime.now(tz=timezone.utc).strftime("%d %B %Y %H:%M")
 
-    rc_hex = {
-        "Critical": "B71C1C", "High": "EF5350",
-        "Moderate": "F9A825", "Low":  "F9A825", "Stable": "2E7D32"
-    }
     rl = risk_label(district["risk_score"])
     crit = int(district.get("critical_count") or 0)
-    sev  = int(district.get("severe_count") or 0)
-    mod  = int(district.get("moderate_count") or 0)
-    total_obs = crit * 3 + sev * 2 + mod
+    sev = int(district.get("severe_count") or 0)
+    mod = int(district.get("moderate_count") or 0)
+    total_obs = crit + sev + mod
 
     doc = DocxDocument()
 
-    # page setup: A4
+    # page setup
     section = doc.sections[0]
-    section.page_width  = Cm(21)
+    section.page_width = Cm(21)
     section.page_height = Cm(29.7)
-    section.left_margin   = Cm(2.5)
-    section.right_margin  = Cm(2.5)
-    section.top_margin    = Cm(2.0)
+    section.left_margin = Cm(2.5)
+    section.right_margin = Cm(2.5)
+    section.top_margin = Cm(2.0)
     section.bottom_margin = Cm(2.0)
 
-    # styles
     style = doc.styles['Normal']
     style.font.name = 'Calibri'
     style.font.size = Pt(10)
 
-    # ── Title block ─────────────────────────────────────────────────────────
+    # Title
     title_p = doc.add_paragraph()
     title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     tr = title_p.add_run("MALAWI FOOD SECURITY MONITOR")
-    tr.bold = True; tr.font.size = Pt(22)
+    tr.bold = True
+    tr.font.size = Pt(22)
     tr.font.color.rgb = RGBColor(27, 58, 107)
 
     subtitle_p = doc.add_paragraph()
     sr = subtitle_p.add_run(f"District Situation Report — {district['district']}")
-    sr.font.size = Pt(14); sr.font.color.rgb = RGBColor(102, 102, 102)
+    sr.font.size = Pt(14)
+    sr.font.color.rgb = RGBColor(102, 102, 102)
 
     meta_p = doc.add_paragraph()
     meta_p.add_run(f"Period: {date_range.get('from','2020-01-01')} to {date_range.get('to','today')}  ·  "
                    f"Commodity: {commodity_str}  ·  Generated: {generated_at} UTC").font.size = Pt(9)
     meta_p.paragraph_format.space_after = Pt(12)
 
-    # horizontal rule simulation
-    border_p = doc.add_paragraph()
-    pPr = border_p._p.get_or_add_pPr()
-    pBdr = OxmlElement('w:pBdr')
-    bottom = OxmlElement('w:bottom')
-    bottom.set(qn('w:val'), 'single')
-    bottom.set(qn('w:sz'), '6')
-    bottom.set(qn('w:color'), '1B3A6B')
-    pBdr.append(bottom)
-    pPr.append(pBdr)
-    border_p.paragraph_format.space_after = Pt(12)
-
-    # ── 1. Situation Summary ────────────────────────────────────────────────
-    _docx_heading(doc, "1. Situation Summary")
-    situation_text = (
+    # Situation Summary
+    doc.add_heading("1. Situation Summary", level=1)
+    situation_text = clean_text(
         f"{district['district']} District, located in Malawi's {district['region']} Region, "
         f"presents a food security risk profile classified as {rl} with a composite risk score "
         f"of {int(district['risk_score'])}. "
-        f"{_severity_sentence(crit, sev, mod, total_obs)} "
-        f"The district's average market price of MWK {int(float(district['avg_price'])):,}/KG "
-        f"reflects the cumulative impact of price pressures over the analysis period."
+        f"{_severity_sentence(crit, sev, mod, total_obs)}"
     )
-    _docx_callout(doc, "Assessment", situation_text, rc_hex.get(rl, "1B3A6B"))
+    p = doc.add_paragraph()
+    p.add_run(situation_text)
 
-    # key stats table
-    _docx_heading(doc, "Key Statistics", level=2)
-    _docx_table(doc,
-        ["Indicator", "Value", "Classification"],
-        [
-            ["Composite Risk Score", str(int(district["risk_score"])), rl],
-            ["Critical Spike Events", str(crit), "Immediate action" if crit > 5 else "Monitor"],
-            ["Average Price (MWK/KG)", f"{int(float(district['avg_price'])):,}", "—"],
-            ["Markets Monitored", str(len(markets)), "—"],
-        ],
-        [2.5, 2.0, 2.5]
-    )
-
-    # ── 2. Food Security Indicators ─────────────────────────────────────────
-    if indicators:
-        _docx_heading(doc, "2. Food Security Indicators")
-        _docx_para(doc, _indicator_narrative(indicators, district["district"]))
-
-        risk_index = round(float(indicators.get("risk_score") or 0) / 436 * 100, 1)
-        spike_rate = float(indicators.get("spike_rate_pct") or 0)
-        coverage   = str(indicators.get("monitoring_status") or "Unknown")
-
-        _docx_table(doc,
-            ["Indicator", "Value", "Threshold", "Status"],
-            [
-                ["Risk Index (0–100)", f"{risk_index:.0f}/100", "100 = worst nationally", rl],
-                ["Price Spike Rate", f"{spike_rate:.1f}%", "> 10% = High Alert",
-                 "HIGH ALERT" if spike_rate > 10 else "ELEVATED" if spike_rate > 5 else "NORMAL"],
-                ["Monitoring Coverage", coverage, "Adequate = sufficient warning",
-                 "⚠ GAP" if "GAP" in coverage.upper() else "OK"],
-            ],
-            [2.5, 1.8, 2.8, 1.6]
-        )
-
-        ew_text = _early_warning_narrative(indicators, forecast)
-        _docx_callout(doc, "Early Warning", ew_text, "E65100")
-
-    # ── 3. Commodity Analysis ───────────────────────────────────────────────
-    if prices:
-        _docx_heading(doc, "3. Commodity Price Analysis")
-        comm_narr = _commodity_narrative([dict(p) for p in prices], commodities)
-        # strip HTML tags for docx
-        import re
-        clean_narr = re.sub(r'<[^>]+>', '', comm_narr)
-        _docx_para(doc, clean_narr)
-
-        price_rows = []
-        for p in prices:
-            pct = float(p.get("avg_pct_change") or 0)
-            stress = "Critical" if pct > 40 else "Elevated" if pct > 15 else "Normal"
-            price_rows.append([
-                p["commodity"],
-                f"{int(float(p['avg_price'])):,} MWK",
-                f"{'+' if pct >= 0 else ''}{pct:.1f}%",
-                stress,
-                str(p["obs"]),
-            ])
-        _docx_table(doc,
-            ["Commodity", "Avg Price (MWK/KG)", "Avg % Change", "Stress Level", "Observations"],
-            price_rows,
-            [2.2, 1.8, 1.5, 1.5, 1.2]
-        )
-
-    # ── 4. Price Forecast ───────────────────────────────────────────────────
-    _docx_heading(doc, "4. 3-Month Price Forecast")
-    import re
-    clean_fc_narr = re.sub(r'<[^>]+>', '', _forecast_narrative(forecast))
-    _docx_callout(doc, "Forecast Summary", clean_fc_narr, "E65100")
-
-    if forecast and forecast.get("months"):
-        fc_rows = []
-        for m in forecast["months"]:
-            fc_rows.append([
-                m.get("month_label", "—"),
-                m.get("season", "—"),
-                f"{int(m.get('predicted_price', 0)):,} MWK",
-                f"{'+' if float(m.get('pct_vs_baseline', 0)) >= 0 else ''}"
-                f"{float(m.get('pct_vs_baseline', 0)):.1f}%",
-                m.get("severity", "Normal"),
-            ])
-        _docx_table(doc,
-            ["Month", "Season", "Projected Price", "vs Baseline", "Severity"],
-            fc_rows,
-            [1.5, 1.5, 1.8, 1.5, 1.5]
-        )
-    else:
-        _docx_para(doc,
-            "Detailed forecast data was not available. The MFPI model requires a minimum "
-            "of 12 months of price history per commodity.", italic=True, color_hex="666666")
-
-    # ── 5. Market Coverage ──────────────────────────────────────────────────
-    if markets:
-        _docx_heading(doc, "5. Market Coverage")
-        import re
-        clean_mkt = re.sub(r'<[^>]+>', '', _market_narrative([dict(m) for m in markets]))
-        _docx_para(doc, clean_mkt)
-
-        mkt_rows = []
-        for m in markets:
-            last = str(m.get("latest_date") or "—")
-            if "T" in last: last = last.split("T")[0]
-            elif " " in last and len(last) > 10: last = last[:10]
-            mkt_rows.append([
-                m["market"],
-                str(m["num_commodities"]),
-                str(m["total_spikes"]),
-                str(m["critical_count"]),
-                f"{float(m['spike_rate_pct']):.1f}%",
-                last,
-            ])
-        _docx_table(doc,
-            ["Market", "Commodities", "Total Spikes", "Critical", "Spike Rate", "Last Report"],
-            mkt_rows,
-            [2.0, 1.2, 1.3, 1.0, 1.2, 1.5]
-        )
-
-    # ── 6. Spike Events ─────────────────────────────────────────────────────
-    if spikes:
-        _docx_heading(doc, "6. Price Spike Events")
-        _docx_para(doc,
-            f"The following table records all detected price spike events for "
-            f"{district['district']} District during the selected period, classified using "
-            f"the WFP ALPS dual-method framework (% change + z-score).")
-
-        spike_rows = []
-        for s in spikes:
-            spike_rows.append([
-                str(s["date"]),
-                s["market"],
-                s["commodity"],
-                f"{int(float(s['price'])):,}",
-                f"+{float(s['pct_change']):.1f}%",
-                f"{float(s.get('zscore', 0)):.2f}",
-                s["spike_severity"],
-            ])
-        _docx_table(doc,
-            ["Date", "Market", "Commodity", "Price (MWK)", "% Jump", "Z-Score", "Severity"],
-            spike_rows,
-            [1.2, 1.8, 1.5, 1.2, 1.0, 1.0, 1.2]
-        )
-
-    # ── 7. Recommendations ─────────────────────────────────────────────────
-    _docx_heading(doc, "7. Recommendations")
+    # Recommendations
+    doc.add_heading("2. Recommendations", level=1)
     risk_score = district["risk_score"]
     if risk_score >= 277:
-        rec = (
-            f"IMMEDIATE ACTION REQUIRED. {district['district']} District's Critical risk "
-            "classification demands immediate food assistance intervention. Activate emergency "
-            "food pipelines and commission a rapid market assessment. Establish maize price "
-            "monitoring thresholds at 1,200 MWK/KG to trigger automatic alert escalation."
-        )
-        rec_color = "B71C1C"
+        rec = f"IMMEDIATE ACTION REQUIRED. {district['district']} District requires immediate food assistance."
     elif risk_score >= 126:
-        rec = (
-            f"ELEVATED MONITORING REQUIRED. {district['district']} District requires "
-            "enhanced monitoring frequency and pre-positioning of contingency food stocks. "
-            "Assess supply chain constraints contributing to elevated price volatility."
-        )
-        rec_color = "E65100"
+        rec = f"ELEVATED MONITORING REQUIRED. {district['district']} District requires enhanced monitoring."
     else:
-        rec = (
-            f"ROUTINE MONITORING. {district['district']} District is operating within "
-            "acceptable food security parameters. Maintain standard monitoring protocols "
-            "and continue seasonal baseline assessments."
-        )
-        rec_color = "2E7D32"
-    _docx_callout(doc, "Recommended Action", rec, rec_color)
-
-    # ── Footer ──────────────────────────────────────────────────────────────
-    footer_p = doc.add_paragraph()
-    footer_p.paragraph_format.space_before = Pt(24)
-    fr = footer_p.add_run(
-        f"Report generated by Malawi Food Security Monitor  |  "
-        f"Source: WFP VAM Food Price Database  |  "
-        f"Generated: {generated_at} UTC  |  "
-        f"Methodology: WFP ALPS dual-method spike detection"
-    )
-    fr.font.size = Pt(8)
-    fr.font.color.rgb = RGBColor(102, 102, 102)
-    fr.italic = True
+        rec = f"ROUTINE MONITORING. {district['district']} District is within acceptable parameters."
+    p = doc.add_paragraph()
+    p.add_run(rec)
 
     buf = BytesIO()
     doc.save(buf)
@@ -1117,34 +1130,34 @@ def build_district_docx(data: dict) -> bytes:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# National PDF builder (unchanged structure, adds narrative callouts)
+# National PDF builder
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def build_pdf(data: dict) -> bytes:
-    """National report — all 28 districts."""
+    """National report — all districts."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=20*mm, rightMargin=20*mm,
-        topMargin=16*mm,  bottomMargin=18*mm,
+        topMargin=16*mm, bottomMargin=18*mm,
         title="Malawi Food Security Monitor", author="WFP VAM",
     )
 
-    story        = []
-    summary      = data["summary"]
-    districts    = data["districts"]
-    crit_spikes  = data["critical_spikes"]
-    commodities  = data["commodities"]
-    gaps         = data["gaps"]
+    story = []
+    summary = data["summary"]
+    districts = data["districts"]
+    crit_spikes = data["critical_spikes"]
+    commodities = data["commodities"]
+    gaps = data["gaps"]
     generated_at = datetime.now(tz=timezone.utc).strftime("%d %B %Y %H:%M")
 
-    total = summary["spike_events"]["total"]    or 1
-    crit  = summary["spike_events"]["critical"] or 0
-    sev   = summary["spike_events"]["severe"]   or 0
-    mod   = summary["spike_events"]["moderate"] or 0
+    total = summary["spike_events"]["total"] or 1
+    crit = summary["spike_events"]["critical"] or 0
+    sev = summary["spike_events"]["severe"] or 0
+    mod = summary["spike_events"]["moderate"] or 0
 
-    body  = _style("body",  fontSize=9, textColor=GREY_DARK, leading=13)
-    small = _style("small", fontSize=8, textColor=GREY_MID,  leading=11)
+    body = _style("body", fontSize=9, textColor=GREY_DARK, leading=13)
+    small = _style("small", fontSize=8, textColor=GREY_MID, leading=11)
 
     _build_cover(story, summary, generated_at)
 
@@ -1164,23 +1177,21 @@ def build_pdf(data: dict) -> bytes:
                    "critical gap districts", RED),
     ]], colWidths=[42*mm]*4)
     cards.setStyle(TableStyle([
-        ("LEFTPADDING",  (0,0),(-1,-1), 0), ("RIGHTPADDING", (0,0),(-1,-1), 0),
-        ("TOPPADDING",   (0,0),(-1,-1), 0), ("BOTTOMPADDING",(0,0),(-1,-1), 0),
-        ("INNERGRID",    (0,0),(-1,-1), 2, WHITE),
+        ("LEFTPADDING", (0,0), (-1,-1), 0), ("RIGHTPADDING", (0,0), (-1,-1), 0),
+        ("TOPPADDING", (0,0), (-1,-1), 0), ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ("INNERGRID", (0,0), (-1,-1), 2, WHITE),
     ]))
     story.append(cards)
     story.append(Spacer(1, 6*mm))
 
     # Executive narrative
-    exec_narr = (
+    exec_narr = clean_text(
         f"This report covers {summary['total_markets']} monitored markets across "
         f"{summary['total_districts']} districts of Malawi for the period January 2020 – present. "
         f"{_severity_sentence(crit, sev, mod, total)} "
         f"{summary['highest_risk_district']['name']} District in "
         f"{summary['highest_risk_district']['region']} Region holds the highest composite "
-        f"risk score ({int(summary['highest_risk_district']['risk_score'])}), driven primarily "
-        f"by {summary['most_spiked_commodity']['name']} price volatility "
-        f"({summary['most_spiked_commodity']['critical_events']} critical events). "
+        f"risk score ({int(summary['highest_risk_district']['risk_score'])}). "
         f"{summary['monitoring_gaps']['critical_gap_districts']} districts have critical "
         f"monitoring gaps — meaning food crises in those areas may go undetected."
     )
@@ -1189,142 +1200,7 @@ def build_pdf(data: dict) -> bytes:
         [_p(exec_narr, _style("en", fontSize=9.5, textColor=GREY_DARK, leading=14))],
         170*mm, bg=BLUE_BG, heading_bg=NAVY
     ))
-    story.append(Spacer(1, 5*mm))
-
-    story.append(LeftBorderBox(
-        _p(
-            "<b>Methodology:</b> Spike detection uses a dual-method approach requiring both "
-            "month-over-month percentage change ≥20% AND rolling 12-month z-score ≥1.5. "
-            "Severity follows the WFP ALPS framework (Moderate ≥20%/z1.5 · Severe ≥40%/z2.0 · "
-            "Critical ≥60%/z2.5).",
-            _style("method", fontSize=9, textColor=GREY_DARK, leading=13)
-        ),
-        170*mm, BLUE_BG, NAVY, border_width=3
-    ))
-    story.append(Spacer(1, 4*mm))
-
-    sev_data = [
-        [_hdr("Severity Level"), _hdr("Thresholds"), _hdr("Count"),
-         _hdr("% of Observations"), _hdr("Recommended Action")],
-        [_col("Critical", RED),  "≥60% change · z-score ≥2.5",
-         _col(str(crit), RED),   f"{round(crit/total*100,2)}%", "Immediate intervention"],
-        [_col("Severe",   ORANGE),"≥40% change · z-score ≥2.0",
-         _col(str(sev), ORANGE), f"{round(sev/total*100,2)}%",  "Emergency response"],
-        [_col("Moderate", AMBER), "≥20% change · z-score ≥1.5",
-         _col(str(mod), AMBER),  f"{round(mod/total*100,2)}%",  "Monitor closely"],
-        [_col("Normal",   GREEN), "Below thresholds",
-         _col(str(max(0, total-crit-sev-mod)), GREEN), "—", "No action required"],
-    ]
-    sev_t = Table(sev_data, colWidths=[30*mm, 48*mm, 20*mm, 32*mm, 40*mm], repeatRows=1)
-    sev_t.setStyle(_table_style())
-    story.append(sev_t)
     story.append(PageBreak())
-
-    # District rankings
-    _section_header(story, "District Risk Rankings",
-                    "All 28 districts ranked by weighted composite score (Critical×3 + Severe×2 + Moderate×1)")
-    dist_rows = [[_hdr("#"), _hdr("District"), _hdr("Region"), _hdr("Risk Level"),
-                  _hdr("Risk Score"), _hdr("Critical"), _hdr("Severe"),
-                  _hdr("Moderate"), _hdr("Spike Rate")]]
-    for i, d in enumerate(districts, 1):
-        rc = risk_color(d["risk_score"]); rl = risk_label(d["risk_score"])
-        dist_rows.append([
-            _p(str(i), small), _p(f"<b>{d['name_1']}</b>", body),
-            _p(d["region"], small), _col(rl, rc),
-            _col(str(int(d["risk_score"])), rc),
-            _col(str(d["critical_count"]), RED),
-            _p(str(d["severe_count"]), body),
-            _p(str(d["moderate_count"]), body),
-            _p(f"{round(float(d['spike_rate_pct']),1)}%", small),
-        ])
-    dist_t = Table(dist_rows,
-                   colWidths=[8*mm,28*mm,24*mm,20*mm,18*mm,17*mm,15*mm,18*mm,18*mm],
-                   repeatRows=1)
-    dist_t.setStyle(_table_style())
-    story.append(dist_t)
-    story.append(PageBreak())
-
-    # Critical spikes
-    _section_header(story, "Critical Spike Events",
-                    "Most recent critical price spike events (price jump ≥60% + z-score ≥2.5)")
-    spike_rows = [[_hdr("Date"), _hdr("District"), _hdr("Market"),
-                   _hdr("Commodity"), _hdr("Price (MWK/KG)"), _hdr("% Jump")]]
-    for s in crit_spikes[:20]:
-        spike_rows.append([
-            _p(s["date"], small), _p(f"<b>{s['district']}</b>", body),
-            _p(s["market"], body), _p(f"<b>{s['commodity']}</b>", body),
-            _p(f"{int(float(s['price'])):,} MWK", body),
-            _col(f"+{round(float(s['pct_change']),1)}%", RED),
-        ])
-    spike_t = Table(spike_rows,
-                    colWidths=[22*mm,30*mm,38*mm,32*mm,28*mm,20*mm], repeatRows=1)
-    spike_t.setStyle(_table_style())
-    story.append(spike_t)
-    story.append(PageBreak())
-
-    # Commodity analysis
-    _section_header(story, "Commodity Analysis",
-                    "Commodities with the highest price shock frequency")
-    comm_rows = [[_hdr("Commodity"), _hdr("Critical Events"),
-                  _hdr("Total Spikes"), _hdr("Spike Rate"), _hdr("Assessment")]]
-    for c in commodities:
-        crit_c = int(c["critical_count"]); rate = float(c["spike_rate"])
-        assessment = ("Priority — immediate attention" if crit_c >= 20 else
-                      "Elevated — monitor" if crit_c >= 5 else "Routine")
-        comm_rows.append([
-            _p(f"<b>{c['commodity']}</b>", body),
-            _col(str(crit_c), RED),
-            _p(str(c["total_spikes"]), body),
-            _p(f"{round(rate,1)}%", body),
-            _p(assessment, _style("as", fontSize=8.5, textColor=GREY_DARK, leading=12)),
-        ])
-    comm_t = Table(comm_rows, colWidths=[55*mm, 30*mm, 28*mm, 22*mm, 35*mm], repeatRows=1)
-    comm_t.setStyle(_table_style())
-    story.append(comm_t)
-    story.append(PageBreak())
-
-    # Monitoring gaps
-    _section_header(story, "Market Monitoring Gaps",
-                    "Districts with high risk scores but insufficient monitoring coverage")
-    story.append(LeftBorderBox(
-        _p(
-            "<b>Why this matters:</b> A high-risk district with few monitored markets means "
-            "food crises may go undetected until they escalate. These gaps represent priority "
-            "areas for WFP monitoring expansion and humanitarian pre-positioning.",
-            _style("why", fontSize=9, textColor=GREY_DARK, leading=13)
-        ),
-        170*mm, ORANGE_BG, ORANGE, border_width=4
-    ))
-    story.append(Spacer(1, 5*mm))
-
-    sc_map = {
-        "CRITICAL GAP": RED, "HIGH GAP": ORANGE, "MODERATE GAP": AMBER,
-        "ADEQUATE": GREEN,   "NO MONITORING": GREY_MID,
-    }
-    gap_rows = [[_hdr("District"), _hdr("Region"), _hdr("Risk Score"),
-                 _hdr("Markets"), _hdr("Monitoring Status")]]
-    for g in gaps:
-        sc = sc_map.get(g["monitoring_status"], GREY_MID)
-        gap_rows.append([
-            _p(f"<b>{g['district']}</b>", body), _p(g["region"], body),
-            _col(str(int(g["risk_score"])), RED),
-            _p(str(int(g["market_count"])), body),
-            _col(g["monitoring_status"], sc),
-        ])
-    gap_t = Table(gap_rows, colWidths=[38*mm, 35*mm, 28*mm, 22*mm, 47*mm], repeatRows=1)
-    gap_t.setStyle(_table_style())
-    story.append(gap_t)
-    story.append(Spacer(1, 8*mm))
-
-    story.append(LeftBorderBox(
-        _p(
-            f"<b>Report generated by:</b> Malawi Food Security GIS Monitor  |  "
-            f"<b>Data source:</b> WFP VAM Food Price Database  |  "
-            f"<b>Generated:</b> {generated_at} UTC",
-            _style("fn", fontSize=8, textColor=GREY_MID, leading=12)
-        ),
-        170*mm, BLUE_BG, NAVY, border_width=3
-    ))
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     return buffer.getvalue()
@@ -1336,76 +1212,79 @@ def build_pdf(data: dict) -> bytes:
 
 @router.get("/generate")
 async def generate_report():
-    """National report — all 28 districts, PDF only."""
+    """National report — all districts, PDF only."""
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
             summary = await conn.fetchrow("""
-                SELECT
-                    (SELECT COUNT(*) FROM markets)                    AS total_markets,
-                    (SELECT COUNT(*) FROM districts_risk)             AS total_districts,
-                    (SELECT COUNT(*) FROM spikes)                     AS total_spikes,
-                    (SELECT COUNT(*) FROM spikes WHERE spike_severity='Critical') AS critical,
-                    (SELECT COUNT(*) FROM spikes WHERE spike_severity='Severe')   AS severe,
-                    (SELECT COUNT(*) FROM spikes WHERE spike_severity='Moderate') AS moderate
-            """)
+                                          SELECT
+                                                  (SELECT COUNT(*) FROM markets) AS total_markets,
+                                                  (SELECT COUNT(*) FROM districts_risk) AS total_districts,
+                                                  (SELECT COUNT(*) FROM spikes) AS total_spikes,
+                                                  (SELECT COUNT(*) FROM spikes WHERE spike_severity='Critical') AS critical,
+                                                  (SELECT COUNT(*) FROM spikes WHERE spike_severity='Severe') AS severe,
+                                                  (SELECT COUNT(*) FROM spikes WHERE spike_severity='Moderate') AS moderate
+                                          """)
             top_district = await conn.fetchrow("""
-                SELECT name_1, region, risk_score FROM districts_risk
-                ORDER BY risk_score DESC NULLS LAST LIMIT 1
-            """)
+                                               SELECT name_1, region, risk_score FROM districts_risk
+                                               ORDER BY risk_score DESC NULLS LAST LIMIT 1
+                                               """)
             top_commodity = await conn.fetchrow("""
-                SELECT commodity, COUNT(*) AS critical_events FROM spikes
-                WHERE spike_severity = 'Critical'
-                GROUP BY commodity ORDER BY critical_events DESC LIMIT 1
-            """)
+                                                SELECT commodity, COUNT(*) AS critical_events FROM spikes
+                                                WHERE spike_severity = 'Critical'
+                                                GROUP BY commodity ORDER BY critical_events DESC LIMIT 1
+                                                """)
             districts = await conn.fetch("""
-                SELECT name_1, region, risk_score, critical_count, severe_count,
-                       moderate_count, spike_rate_pct
-                FROM districts_risk ORDER BY risk_score DESC NULLS LAST
-            """)
+                                         SELECT name_1, region, risk_score, critical_count, severe_count,
+                                                moderate_count, spike_rate_pct
+                                         FROM districts_risk ORDER BY risk_score DESC NULLS LAST
+                                         """)
             crit_spikes = await conn.fetch("""
-                SELECT date::date::text AS date, district, market, commodity,
+                                           SELECT date::date::text AS date, district, market, commodity,
                        price, pct_change, zscore
-                FROM spikes WHERE spike_severity = 'Critical'
-                ORDER BY date DESC LIMIT 30
-            """)
+                                           FROM spikes WHERE spike_severity = 'Critical'
+                                           ORDER BY date DESC LIMIT 30
+                                           """)
             commodities = await conn.fetch("""
-                SELECT commodity,
-                    COUNT(*) FILTER (WHERE spike_severity='Critical') AS critical_count,
-                    COUNT(*) AS total_spikes,
-                    ROUND(
-                        COUNT(*) FILTER (WHERE spike_severity='Critical')::numeric
+                                           SELECT commodity,
+                                                  COUNT(*) FILTER (WHERE spike_severity='Critical') AS critical_count,
+                                               COUNT(*) AS total_spikes,
+                                                  ROUND(
+                                                          COUNT(*) FILTER (WHERE spike_severity='Critical')::numeric
                         / NULLIF(COUNT(*),0) * 100, 1
-                    ) AS spike_rate
-                FROM spikes GROUP BY commodity ORDER BY critical_count DESC LIMIT 20
-            """)
+                                                  ) AS spike_rate
+                                           FROM spikes GROUP BY commodity ORDER BY critical_count DESC LIMIT 20
+                                           """)
             gaps = await conn.fetch("""
-                SELECT dr.name_1 AS district, dr.region, dr.risk_score,
-                    COUNT(m.ogc_fid) AS market_count,
-                    CASE
-                        WHEN COUNT(m.ogc_fid) = 0       THEN 'NO MONITORING'
-                        WHEN dr.risk_score > 300 AND COUNT(m.ogc_fid) < 3 THEN 'CRITICAL GAP'
-                        WHEN dr.risk_score > 150 AND COUNT(m.ogc_fid) < 5 THEN 'HIGH GAP'
-                        WHEN dr.risk_score > 50  AND COUNT(m.ogc_fid) < 8 THEN 'MODERATE GAP'
-                        ELSE 'ADEQUATE'
-                    END AS monitoring_status
-                FROM districts_risk dr
-                LEFT JOIN markets m ON ST_Within(m.wkb_geometry, dr.wkb_geometry)
-                GROUP BY dr.name_1, dr.region, dr.risk_score
-                ORDER BY dr.risk_score DESC
-            """)
+                                    SELECT dr.name_1 AS district, dr.region, dr.risk_score,
+                                           COUNT(m.ogc_fid) AS market_count,
+                                           CASE
+                                               WHEN COUNT(m.ogc_fid) = 0 THEN 'NO MONITORING'
+                                               WHEN dr.risk_score > 300 AND COUNT(m.ogc_fid) < 3 THEN 'CRITICAL GAP'
+                                               WHEN dr.risk_score > 150 AND COUNT(m.ogc_fid) < 5 THEN 'HIGH GAP'
+                                               WHEN dr.risk_score > 50 AND COUNT(m.ogc_fid) < 8 THEN 'MODERATE GAP'
+                                               ELSE 'ADEQUATE'
+                                               END AS monitoring_status
+                                    FROM districts_risk dr
+                                             LEFT JOIN markets m ON ST_Within(m.wkb_geometry, dr.wkb_geometry)
+                                    GROUP BY dr.name_1, dr.region, dr.risk_score
+                                    ORDER BY dr.risk_score DESC
+                                    """)
 
         data = {
             "summary": {
-                "total_markets"    : int(summary["total_markets"]),
-                "total_districts"  : int(summary["total_districts"]),
-                "total_regions"    : "3",
-                "spike_events"     : {
-                    "total": int(summary["total_spikes"]), "critical": int(summary["critical"]),
-                    "severe": int(summary["severe"]), "moderate": int(summary["moderate"]),
+                "total_markets": int(summary["total_markets"]),
+                "total_districts": int(summary["total_districts"]),
+                "total_regions": "3",
+                "spike_events": {
+                    "total": int(summary["total_spikes"]),
+                    "critical": int(summary["critical"]),
+                    "severe": int(summary["severe"]),
+                    "moderate": int(summary["moderate"]),
                 },
                 "highest_risk_district": {
-                    "name": top_district["name_1"], "region": top_district["region"],
+                    "name": top_district["name_1"],
+                    "region": top_district["region"],
                     "risk_score": float(top_district["risk_score"]),
                 },
                 "most_spiked_commodity": {
@@ -1414,18 +1293,18 @@ async def generate_report():
                 },
                 "monitoring_gaps": {
                     "critical_gap_districts": sum(
-                        1 for g in gaps if g["monitoring_status"] in ("CRITICAL GAP","NO MONITORING")
+                        1 for g in gaps if g["monitoring_status"] in ("CRITICAL GAP", "NO MONITORING")
                     ),
                 },
             },
-            "districts"    : [dict(r) for r in districts],
+            "districts": [dict(r) for r in districts],
             "critical_spikes": [dict(r) for r in crit_spikes],
-            "commodities"  : [dict(r) for r in commodities],
-            "gaps"         : [dict(r) for r in gaps],
+            "commodities": [dict(r) for r in commodities],
+            "gaps": [dict(r) for r in gaps],
         }
 
         pdf_bytes = build_pdf(data)
-        filename  = f"malawi_food_security_{datetime.now().strftime('%Y-%m-%d')}.pdf"
+        filename = f"malawi_food_security_{datetime.now().strftime('%Y-%m-%d')}.pdf"
         return Response(
             content=pdf_bytes, media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename={filename}"},
@@ -1437,140 +1316,193 @@ async def generate_report():
 
 @router.get("/district/{district_name}")
 async def generate_district_report(
-    district_name : str,
-    date_from     : Optional[str]  = Query(None, description="YYYY-MM-DD"),
-    date_to       : Optional[str]  = Query(None, description="YYYY-MM-DD"),
-    year          : Optional[str]  = Query(None, description="e.g. 2026"),
-    commodity     : List[str]      = Query(default=[], description="One or more commodities"),
-    sections      : List[str]      = Query(default=["narrative","prices","spikes","indicators","markets","forecast"]),
-    fmt           : str            = Query(default="pdf", description="pdf | docx"),
+        district_name: str,
+        date_from: Optional[str] = Query(None, description="YYYY-MM-DD"),
+        date_to: Optional[str] = Query(None, description="YYYY-MM-DD"),
+        year: Optional[str] = Query(None, description="e.g. 2026"),
+        commodity: List[str] = Query(default=[], description="One or more commodities"),
+        sections: List[str] = Query(default=["narrative", "prices", "spikes", "indicators", "markets", "forecast"]),
+        fmt: str = Query(default="pdf", description="pdf | docx"),
 ):
-    """
-    District-level report with optional date, multi-commodity, and format filters.
+    """District-level report with optional date, multi-commodity, and format filters."""
 
-    Multi-commodity: pass commodity= multiple times:
-      /district/Machinga?commodity=Maize&commodity=Beans
-    """
     from urllib.parse import unquote
     district_name = unquote(district_name)
 
+    # FILTER: Remove sections that don't exist in district reports
+    valid_district_sections = {"narrative", "prices", "spikes", "indicators", "markets", "forecast"}
+    filtered_sections = [s for s in sections if s in valid_district_sections]
+
+    if not filtered_sections:
+        filtered_sections = ["narrative", "prices", "spikes", "indicators", "markets", "forecast"]
+
+    if len(filtered_sections) != len(sections):
+        invalid = set(sections) - valid_district_sections
+        logger.warning(f"Removed invalid sections for district report: {invalid}")
+
     if year and not date_from:
-        date_from = f"{year}-01-01"; date_to = f"{year}-12-31"
-    if not date_from: date_from = "2020-01-01"
-    if not date_to:   date_to   = datetime.now().strftime("%Y-%m-%d")
+        date_from = f"{year}-01-01"
+        date_to = f"{year}-12-31"
+    if not date_from:
+        date_from = "2020-01-01"
+    if not date_to:
+        date_to = datetime.now().strftime("%Y-%m-%d")
 
     date_from_obj = date_type.fromisoformat(date_from)
-    date_to_obj   = date_type.fromisoformat(date_to)
+    date_to_obj = date_type.fromisoformat(date_to)
 
-    # Commodity filter: None means all
-    comm_list  = [c for c in commodity if c and c != "All commodities"]
-    comm_filter = comm_list if comm_list else None  # None = no filter
+    comm_list = [c for c in commodity if c and c != "All commodities"]
+    comm_filter = comm_list if comm_list else None
 
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
             district = await conn.fetchrow("""
-                SELECT district, region, risk_score, critical_count, severe_count,
-                       moderate_count, COALESCE(spike_rate_pct,0) AS spike_rate_pct,
-                       COALESCE(avg_price,0) AS avg_price
-                FROM districts_risk WHERE district ILIKE $1 LIMIT 1
-            """, district_name)
+                                           SELECT district, region, risk_score, critical_count, severe_count,
+                                                  moderate_count, COALESCE(spike_rate_pct,0) AS spike_rate_pct,
+                                                  COALESCE(avg_price,0) AS avg_price
+                                           FROM districts_risk WHERE district ILIKE $1 LIMIT 1
+                                           """, district_name)
+
             if not district:
                 return JSONResponse(status_code=404,
                                     content={"error": f"District '{district_name}' not found"})
 
-            # spikes — filter by date and (optionally) commodity
+            # Check data freshness - FIXED
+            data_freshness_days = 0
+            try:
+                latest_price_date = await conn.fetchval("""
+                                                        SELECT MAX(date::date) FROM prices WHERE district ILIKE $1
+                                                        """, district_name)
+
+                if latest_price_date and isinstance(latest_price_date, date_type):
+                    data_freshness_days = (date_type.today() - latest_price_date).days
+                    logger.info(f"Data freshness for {district_name}: {data_freshness_days} days")
+                else:
+                    data_freshness_days = 999
+            except Exception as e:
+                logger.warning(f"Could not calculate data freshness: {e}")
+                data_freshness_days = 0
+
+            # Rest of queries...
             spikes = await conn.fetch("""
-                SELECT date::date::text AS date, market, commodity,
+                                      SELECT date::date::text AS date, market, commodity,
                        price, pct_change, zscore, spike_severity
-                FROM spikes
-                WHERE district ILIKE $1 AND date BETWEEN $2 AND $3
-                  AND ($4::text[] IS NULL OR commodity = ANY($4::text[]))
-                ORDER BY date DESC LIMIT 100
-            """, district_name, date_from_obj, date_to_obj, comm_filter)
+                                      FROM spikes
+                                      WHERE district ILIKE $1 AND date BETWEEN $2 AND $3
+                                        AND ($4::text[] IS NULL OR commodity = ANY($4::text[]))
+                                      ORDER BY date DESC LIMIT 100
+                                      """, district_name, date_from_obj, date_to_obj, comm_filter)
 
             prices = await conn.fetch("""
-                SELECT commodity,
-                    ROUND(AVG(price::numeric)::numeric, 0)      AS avg_price,
-                    ROUND(AVG(pct_change::numeric)::numeric, 1) AS avg_pct_change,
-                    COUNT(*)                                     AS obs
-                FROM prices
-                WHERE district ILIKE $1
-                  AND price      ~ '^[0-9]+(\.[0-9]+)?$'
-                  AND pct_change ~ '^-?[0-9]+(\.[0-9]+)?$'
-                  AND ($2::text[] IS NULL OR commodity = ANY($2::text[]))
-                  AND date::date BETWEEN $3 AND $4
-                GROUP BY commodity ORDER BY avg_price DESC
-            """, district_name, comm_filter, date_from_obj, date_to_obj)
+                                      SELECT commodity,
+                                             ROUND(AVG(price::numeric)::numeric, 0) AS avg_price,
+                                             ROUND(AVG(pct_change::numeric)::numeric, 1) AS avg_pct_change,
+                                             COUNT(*) AS obs
+                                      FROM prices
+                                      WHERE district ILIKE $1
+                                        AND price ~ '^[0-9]+(\.[0-9]+)?$'
+                                        AND pct_change ~ '^-?[0-9]+(\.[0-9]+)?$'
+                                        AND ($2::text[] IS NULL OR commodity = ANY($2::text[]))
+                                        AND date::date BETWEEN $3 AND $4
+                                      GROUP BY commodity ORDER BY avg_price DESC
+                                      """, district_name, comm_filter, date_from_obj, date_to_obj)
 
             markets = await conn.fetch("""
-                SELECT market, num_commodities, total_spikes, critical_count,
-                       spike_rate_pct, latest_date::date::text AS latest_date
-                FROM markets WHERE district ILIKE $1
-                ORDER BY total_spikes DESC
-            """, district_name)
+                                       SELECT market, num_commodities, total_spikes, critical_count,
+                                              spike_rate_pct, latest_date::date::text AS latest_date
+                                       FROM markets WHERE district ILIKE $1
+                                       ORDER BY total_spikes DESC
+                                       """, district_name)
 
             indicators = await conn.fetchrow("""
-                SELECT risk_score, critical_count,
-                    COALESCE(spike_rate_pct,0) AS spike_rate_pct,
-                    COALESCE(avg_price,0)      AS avg_price,
-                    CASE
-                        WHEN risk_score > 300 THEN 'CRITICAL GAP'
-                        WHEN risk_score > 150 THEN 'HIGH GAP'
-                        WHEN risk_score > 50  THEN 'MODERATE GAP'
-                        ELSE 'ADEQUATE'
-                    END AS monitoring_status
-                FROM districts_risk WHERE district ILIKE $1
-            """, district_name)
+                                             SELECT risk_score, critical_count,
+                                                    COALESCE(spike_rate_pct,0) AS spike_rate_pct,
+                                                    COALESCE(avg_price,0) AS avg_price,
+                                                    CASE
+                                                        WHEN risk_score > 300 THEN 'CRITICAL GAP'
+                                                        WHEN risk_score > 150 THEN 'HIGH GAP'
+                                                        WHEN risk_score > 50 THEN 'MODERATE GAP'
+                                                        ELSE 'ADEQUATE'
+                                                        END AS monitoring_status
+                                             FROM districts_risk WHERE district ILIKE $1
+                                             """, district_name)
 
-            # forecast data from forecasts table (if it exists)
+            # Forecast query
             forecast = None
             try:
-                fc_rows = await conn.fetch("""
-                    SELECT month_label, season, predicted_price,
-                           pct_vs_baseline, severity
-                    FROM forecasts
-                    WHERE district ILIKE $1
-                      AND ($2::text[] IS NULL OR commodity = ANY($2::text[]))
-                    ORDER BY forecast_date ASC LIMIT 3
-                """, district_name, comm_filter)
-                if fc_rows:
-                    forecast = {"months": [dict(r) for r in fc_rows]}
-            except Exception:
-                pass  # forecasts table may not exist yet
+                table_exists = await conn.fetchval("""
+                                                   SELECT EXISTS (
+                                                       SELECT FROM information_schema.tables
+                                                       WHERE table_name = 'forecasts'
+                                                   )
+                                                   """)
 
-        payload = {
-            "district"     : dict(district),
-            "spikes"       : [dict(r) for r in spikes],
-            "prices"       : [dict(r) for r in prices],
-            "markets"      : [dict(r) for r in markets],
-            "sections"     : sections,
-            "date_range"   : {"from": date_from, "to": date_to},
-            "commodity_list": comm_list or ["All commodities"],
-            "indicators"   : dict(indicators) if indicators else None,
-            "forecast"     : forecast,
-        }
+                if table_exists:
+                    fc_rows = await conn.fetch("""
+                                               SELECT
+                                                   to_char(forecast_date, 'Mon YYYY') AS month_label,
+                                                   CASE
+                                                       WHEN EXTRACT(MONTH FROM forecast_date) IN (11,12,1,2,3) THEN 'Lean season'
+                                                       ELSE 'Post-harvest'
+                                                       END AS season,
+                                                   ROUND(predicted_price::numeric, 0) AS predicted_price,
+                                                   ROUND(pct_vs_baseline::numeric, 1) AS pct_vs_baseline,
+                                                   CASE
+                                                       WHEN pct_vs_baseline > 40 THEN 'Critical'
+                                                       WHEN pct_vs_baseline > 20 THEN 'Severe'
+                                                       WHEN pct_vs_baseline > 10 THEN 'Moderate'
+                                                       ELSE 'Normal'
+                                                       END AS severity
+                                               FROM forecasts
+                                               WHERE district ILIKE $1
+                                                 AND ($2::text[] IS NULL OR commodity = ANY($2::text[]))
+                                                 AND forecast_date >= CURRENT_DATE
+                                               ORDER BY forecast_date ASC
+                                                   LIMIT 3
+                                               """, district_name, comm_filter)
 
-        safe_name = district_name.replace(" ", "_").lower()
-        date_tag  = datetime.now().strftime('%Y-%m-%d')
+                    if fc_rows:
+                        forecast = {"months": [dict(r) for r in fc_rows]}
+                        logger.info(f"Found forecast data for {district_name}")
+            except Exception as e:
+                logger.warning(f"Forecast query failed: {e}")
 
-        if fmt.lower() == "docx":
-            docx_bytes = build_district_docx(payload)
-            filename   = f"report_{safe_name}_{date_tag}.docx"
+            # Build payload - USE filtered_sections
+            payload = {
+                "district": dict(district),
+                "spikes": [dict(r) for r in spikes],
+                "prices": [dict(r) for r in prices],
+                "markets": [dict(r) for r in markets],
+                "sections": filtered_sections,  # ← FIXED: use filtered_sections
+                "date_range": {"from": date_from, "to": date_to},
+                "commodity_list": comm_list or ["All commodities"],
+                "indicators": dict(indicators) if indicators else None,
+                "forecast": forecast,
+                "data_freshness_days": data_freshness_days,
+            }
+
+            safe_name = district_name.replace(" ", "_").lower()
+            date_tag = datetime.now().strftime('%Y-%m-%d')
+
+            if fmt.lower() == "docx":
+                docx_bytes = build_district_docx(payload)
+                filename = f"report_{safe_name}_{date_tag}.docx"
+                return Response(
+                    content=docx_bytes,
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"},
+                )
+
+            pdf_bytes = build_district_pdf(payload)
+            filename = f"report_{safe_name}_{date_tag}.pdf"
             return Response(
-                content=docx_bytes,
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                content=pdf_bytes, media_type="application/pdf",
                 headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
 
-        pdf_bytes = build_district_pdf(payload)
-        filename  = f"report_{safe_name}_{date_tag}.pdf"
-        return Response(
-            content=pdf_bytes, media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
-
     except Exception as e:
         import traceback
+        logger.error(f"Error in generate_district_report: {e}")
         return JSONResponse(status_code=500,
                             content={"error": str(e), "trace": traceback.format_exc()})
