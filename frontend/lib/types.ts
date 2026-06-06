@@ -9,6 +9,10 @@ export interface GeoJSONPolygon {
   coordinates: number[][][] | number[][][][]
 }
 
+interface HeaderProps {
+    activePage?: "dashboard" | "forecast" | "heatmap" | "season" | "indicators" | "reports"
+}
+
 // ── Base Map─────────────────────────────────────────
 export interface BasemapConfig {
   name : string

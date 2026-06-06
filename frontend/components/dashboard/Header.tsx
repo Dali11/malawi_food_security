@@ -10,7 +10,7 @@ import PipelineStatusBar from "./Pipelinestatusbar"
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface HeaderProps {
-  activePage?: "dashboard" | "forecast" | "heatmap" | "season" | "indicators"
+    activePage?: "dashboard" | "forecast" | "heatmap" | "season" | "indicators" | "reports"
 }
 
 const TABS = [
@@ -19,6 +19,7 @@ const TABS = [
   { id: "heatmap",    label: "Heatmap",         href: "/heatmap"    },
   { id: "season",     label: "Season baseline", href: "/season"     },
   { id: "indicators", label: "Indicators",      href: "/indicators" },
+    { id: "reports", label: "Reports", href: "/reports" },
 ]
 
 export default function Header({ activePage = "dashboard" }: HeaderProps) {
