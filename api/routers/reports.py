@@ -338,7 +338,9 @@ def _footer(canvas, doc):
     canvas.setFillColor(GREY_MID)
     canvas.drawString(20*mm, 10*mm,
                       "Malawi Food Security Monitor  —  WFP VAM Data  —  Confidential")
-    canvas.drawRightString(190*mm, 10*mm, f"Page {doc.page}")
+    # Don't show page number on cover (page 1)
+    if doc.page > 1:
+        canvas.drawRightString(190*mm, 10*mm, f"Page {doc.page - 1}")
     canvas.restoreState()
 
 
