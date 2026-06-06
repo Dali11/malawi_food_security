@@ -10,3 +10,4 @@ reportlab
 google-genai
 prophet
 openpyxl
+python-docx
