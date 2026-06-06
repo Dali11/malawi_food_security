@@ -80,7 +80,11 @@ def clean_text(text: str) -> str:
     """Remove LaTeX math mode formatting artifacts."""
     if not text:
         return text
-    return text.replace(r'\(', '').replace(r'\)', '').replace(r'\%', '%')
+    text = text.replace(r'\(', '').replace(r'\)', '')
+    text = text.replace(r'\%', '%')
+    text = text.replace(r'\geq', '≥')
+    text = text.replace(r'\leq', '≤')
+    return text
 
 def risk_color(score):
     if score >= 277: return RED
