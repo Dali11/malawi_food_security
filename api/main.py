@@ -19,7 +19,7 @@ from api.routers import (
     export,
     pipeline,
     heatmap,
-    season,
+    season_baseline,
     indicators,
 )
 
@@ -61,8 +61,15 @@ app.include_router(forecast.router)
 app.include_router(export.router)
 app.include_router(pipeline.router)
 app.include_router(heatmap.router)
-app.include_router(season.router)
-app.include_router(indicators.router)   # ← new
+app.include_router(season_baseline.router)
+app.include_router(indicators.router)
+
+# ── Compatibility endpoint for frontend (legacy route) ────────────────────────
+@app.get("/api/season/calendar")
+async def season_calendar_compat():
+    """Frontend expects /api/season/calendar - maps to new season_baseline endpoint"""
+    from api.routers.season_baseline import get_crop_calendar
+    return await get_crop_calendar()
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])

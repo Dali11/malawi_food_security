@@ -1,9 +1,27 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { getSeasonBaseline, getCropCalendar }       from "@/lib/api"
-import type { SeasonBaseline, CropCalendar }        from "@/lib/api"
-import { FORECAST_COMMODITIES }                     from "@/lib/constants"
+import {
+    getNationalSeasonBaseline,
+    getCropCalendar,
+}                                                    from "@/lib/api"
+import type {
+    NationalSeasonBaseline,
+    CropCalendar,
+}                                                    from "@/lib/api"
+import { FORECAST_COMMODITIES }                      from "@/lib/constants"
+
+// ── CHANGES vs old component ───────────────────────────────────────────────
+// 1. Import: SeasonBaseline → NationalSeasonBaseline, getSeasonBaseline →
+//    getNationalSeasonBaseline
+// 2. State type: SeasonBaseline | null → NationalSeasonBaseline | null
+// 3. fetchBaseline: calls getNationalSeasonBaseline(commodity)
+// 4. KPI cards: baseline.districts → baseline.commodities
+// 5. District table body: d.seasons[s]?.avg_price →
+//    flat field (planting_baseline / harvest_baseline / etc.)
+// 6. Footer note: hard-coded "4-year" → baseline.baseline_window
+// 7. seasonFieldFor() helper added — maps season name to flat field key
+// ──────────────────────────────────────────────────────────────────────────
 
 const SEASONS = ["Planting", "Harvest", "Post-harvest", "Lean"] as const
 
@@ -12,6 +30,19 @@ const SEASON_MONTHS: Record<string, string> = {
     Harvest       : "Mar – May",
     "Post-harvest": "Jun – Aug",
     Lean          : "Sep – Oct",
+}
+
+// Maps a season label to the flat field name on SeasonBaselineDistrict
+function seasonFieldFor(
+    season: string
+): "planting_baseline" | "harvest_baseline" | "post_harvest_baseline" | "lean_baseline" {
+    switch (season) {
+        case "Planting":     return "planting_baseline"
+        case "Harvest":      return "harvest_baseline"
+        case "Post-harvest": return "post_harvest_baseline"
+        case "Lean":         return "lean_baseline"
+        default:             return "planting_baseline"
+    }
 }
 
 function fmt(n: number | null | undefined): string {
@@ -33,7 +64,7 @@ function statusPill(status: string) {
         Severe   : { bg: "#FAEEDA", color: "#854F0B" },
         Elevated : { bg: "#EAF3DE", color: "#3B6D11" },
         Normal   : { bg: "#EAF3DE", color: "#3B6D11" },
-        "No data": { bg: "transparent", color: "#94a3b8"  },
+        "No data": { bg: "transparent", color: "#94a3b8" },
     }
     return map[status] ?? map["No data"]
 }
@@ -49,12 +80,11 @@ function Pill({ label, bg, color }: { label: string; bg: string; color: string }
     return (
         <span className="inline-block text-xs font-medium px-1.5 py-0.5 rounded-full"
               style={{ background: bg, color }}>
-      {label}
-    </span>
+            {label}
+        </span>
     )
 }
 
-// ← max is now required so bars are relative to each other
 function DeviationBar({ pct, max }: { pct: number | null; max: number }) {
     if (pct === null || max === 0) return (
         <div className="h-0.5 w-full rounded-full mt-1"
@@ -73,7 +103,7 @@ function DeviationBar({ pct, max }: { pct: number | null; max: number }) {
 function SeasonStrip({ current }: { current: string }) {
     return (
         <div className="flex items-center border border-slate-200 dark:border-slate-700
-                    rounded-lg overflow-hidden mb-5 h-9">
+                        rounded-lg overflow-hidden mb-5 h-9">
             <div className="w-1 self-stretch bg-blue-500 flex-shrink-0"/>
             <div className="flex items-center px-4 flex-1 flex-wrap"
                  style={{ gap: "6px 24px" }}>
@@ -81,24 +111,24 @@ function SeasonStrip({ current }: { current: string }) {
                     const active = s === current
                     return (
                         <span key={s} className="flex items-center gap-1.5">
-              <span className={`text-xs font-medium ${
-                  active
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-slate-600 dark:text-slate-400"
-              }`}>
-                {s}
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-600">
-                {SEASON_MONTHS[s]}
-              </span>
+                            <span className={`text-xs font-medium ${
+                                active
+                                    ? "text-blue-600 dark:text-blue-400"
+                                    : "text-slate-600 dark:text-slate-400"
+                            }`}>
+                                {s}
+                            </span>
+                            <span className="text-xs text-slate-400 dark:text-slate-600">
+                                {SEASON_MONTHS[s]}
+                            </span>
                             {active && (
                                 <span className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-600
-                                 dark:text-blue-400 px-1.5 py-0.5 rounded-full border
-                                 border-blue-200 dark:border-blue-800">
-                  current
-                </span>
+                                                 dark:text-blue-400 px-1.5 py-0.5 rounded-full border
+                                                 border-blue-200 dark:border-blue-800">
+                                    current
+                                </span>
                             )}
-            </span>
+                        </span>
                     )
                 })}
             </div>
@@ -114,8 +144,8 @@ const TH = ({
     blue?: boolean
 }) => (
     <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide
-                  border-b border-slate-200 dark:border-slate-700
-                  bg-slate-50 dark:bg-slate-800/60 ${
+                    border-b border-slate-200 dark:border-slate-700
+                    bg-slate-50 dark:bg-slate-800/60 ${
         right ? "text-right" : "text-left"
     } ${blue ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`}>
         {children}
@@ -145,7 +175,10 @@ export default function SeasonPanel() {
     const [tab, setTab]                 = useState<"calendar" | "baseline">("calendar")
     const [commodity, setCommodity]     = useState("Maize")
     const [calendar, setCalendar]       = useState<CropCalendar | null>(null)
-    const [baseline, setBaseline]       = useState<SeasonBaseline | null>(null)
+
+    // CHANGED: was SeasonBaseline | null, now NationalSeasonBaseline | null
+    const [baseline, setBaseline]       = useState<NationalSeasonBaseline | null>(null)
+
     const [loadingCal, setLoadingCal]   = useState(true)
     const [loadingBase, setLoadingBase] = useState(false)
     const [error, setError]             = useState("")
@@ -160,7 +193,11 @@ export default function SeasonPanel() {
     const fetchBaseline = useCallback(() => {
         setLoadingBase(true)
         setBaseline(null)
-        getSeasonBaseline(commodity)
+        // CHANGED: getNationalSeasonBaseline(commodity) — no longer passes commodity
+        // as a filter (returns all commodities, commodity pill filters client-side)
+        // OR pass commodity to filter server-side — either works.
+        // Passing it server-side is faster for large datasets:
+        getNationalSeasonBaseline(commodity)
             .then(setBaseline)
             .catch(e => setError(e.message))
             .finally(() => setLoadingBase(false))
@@ -174,36 +211,36 @@ export default function SeasonPanel() {
         ?? baseline?.current_season
         ?? "Post-harvest"
 
-    const aboveBaseline = baseline?.districts.filter(
-        d => (d.pct_vs_baseline ?? 0) > 0
-    ).length ?? 0
+    // CHANGED: baseline.districts → baseline.commodities
+    const rows = baseline?.commodities ?? []
 
-    const reporting = baseline?.districts.filter(d => d.current_price).length ?? 0
+    const aboveBaseline = rows.filter(
+        d => (d.pct_vs_baseline ?? 0) > 0
+    ).length
+
+    const reporting = rows.filter(d => d.current_price != null).length
 
     const avgDev = (() => {
-        if (!baseline) return null
-        const valid = baseline.districts.filter(d => d.pct_vs_baseline !== null)
+        if (!rows.length) return null
+        const valid = rows.filter(d => d.pct_vs_baseline !== null)
         if (!valid.length) return null
         return Math.round(
             valid.reduce((s, d) => s + (d.pct_vs_baseline ?? 0), 0) / valid.length
         )
     })()
 
-    // ← compute max pct once so all bars are relative to the highest district
-    const maxPct = baseline
+    const maxPct = rows.length
         ? Math.max(
-            ...baseline.districts
-                .map(d => Math.abs(d.pct_vs_baseline ?? 0))
-                .filter(v => v > 0),
-            1  // prevent division by zero
+            ...rows.map(d => Math.abs(d.pct_vs_baseline ?? 0)).filter(v => v > 0),
+            1
         )
         : 1
 
-    const Skeleton = ({ rows = 6 }: { rows?: number }) => (
+    const Skeleton = ({ rows: n = 6 }: { rows?: number }) => (
         <div className="space-y-2">
-            {Array.from({ length: rows }).map((_, i) => (
+            {Array.from({ length: n }).map((_, i) => (
                 <div key={i} className="h-10 rounded-lg animate-pulse
-                                bg-slate-100 dark:bg-slate-800"/>
+                                        bg-slate-100 dark:bg-slate-800"/>
             ))}
         </div>
     )
@@ -211,9 +248,9 @@ export default function SeasonPanel() {
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
 
-            {/* ── header ─────────────────────────────────────────────────────── */}
+            {/* ── header ──────────────────────────────────────────────────── */}
             <div className="flex-shrink-0 px-6 py-4 bg-white dark:bg-slate-900
-                      border-b border-slate-200 dark:border-slate-800">
+                            border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
@@ -223,19 +260,19 @@ export default function SeasonPanel() {
                             {calendar?.current_month ?? "—"}
                             &nbsp;·&nbsp;
                             <span className="text-slate-700 dark:text-slate-300 font-medium">
-                {currentSeason} season
-              </span>
+                                {currentSeason} season
+                            </span>
                             &nbsp;·&nbsp;
                             {SEASON_MONTHS[currentSeason]}
                         </p>
                     </div>
 
                     <div className="flex flex-shrink-0 border border-slate-200
-                          dark:border-slate-700 rounded-lg overflow-hidden">
+                                    dark:border-slate-700 rounded-lg overflow-hidden">
                         {(["calendar", "baseline"] as const).map((t, i) => (
                             <button key={t} onClick={() => setTab(t)}
                                     className={`px-4 py-1.5 text-xs font-medium transition-colors
-                                  capitalize ${
+                                                capitalize ${
                                         i > 0
                                             ? "border-l border-slate-200 dark:border-slate-700"
                                             : ""
@@ -251,13 +288,13 @@ export default function SeasonPanel() {
                 </div>
             </div>
 
-            {/* ── body ───────────────────────────────────────────────────────── */}
+            {/* ── body ────────────────────────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
 
                 {error && (
                     <div className="mb-4 px-4 py-3 rounded-lg text-sm text-red-600
-                          bg-red-50 dark:bg-red-950/20 border border-red-200
-                          dark:border-red-800 flex items-center justify-between">
+                                    bg-red-50 dark:bg-red-950/20 border border-red-200
+                                    dark:border-red-800 flex items-center justify-between">
                         {error}
                         <button onClick={() => setError("")}
                                 className="text-xs underline ml-4 flex-shrink-0">
@@ -268,12 +305,12 @@ export default function SeasonPanel() {
 
                 <SeasonStrip current={currentSeason} />
 
-                {/* ── CROP CALENDAR ────────────────────────────────────────────── */}
+                {/* ── CROP CALENDAR ─────────────────────────────────────── */}
                 {tab === "calendar" && (
                     loadingCal ? <Skeleton /> : calendar && (
                         <>
                             <div className="rounded-xl border border-slate-200
-                              dark:border-slate-700 overflow-hidden">
+                                            dark:border-slate-700 overflow-hidden">
                                 <table className="w-full border-collapse"
                                        style={{ tableLayout: "fixed" }}>
                                     <colgroup>
@@ -303,25 +340,25 @@ export default function SeasonPanel() {
                                         return (
                                             <tr key={i}
                                                 className="hover:bg-slate-50 dark:hover:bg-slate-800/40
-                                       transition-colors">
+                                                               transition-colors">
                                                 <TD>
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-medium text-slate-800
-                                               dark:text-slate-200 text-xs">
-                                {c.commodity}
-                              </span>
+                                                            <span className="font-medium text-slate-800
+                                                                             dark:text-slate-200 text-xs">
+                                                                {c.commodity}
+                                                            </span>
                                                         <Pill label={c.status} bg={sp.bg} color={sp.color}/>
                                                     </div>
                                                 </TD>
                                                 {SEASONS.map(s => (
                                                     <TD key={s} right mono muted={s !== currentSeason}>
-                              <span className={
-                                  s === currentSeason
-                                      ? "text-blue-600 dark:text-blue-400 font-medium"
-                                      : ""
-                              }>
-                                {fmt(c.seasons[s])}
-                              </span>
+                                                            <span className={
+                                                                s === currentSeason
+                                                                    ? "text-blue-600 dark:text-blue-400 font-medium"
+                                                                    : ""
+                                                            }>
+                                                                {fmt(c.seasons[s])}
+                                                            </span>
                                                     </TD>
                                                 ))}
                                                 <TD right>
@@ -341,28 +378,29 @@ export default function SeasonPanel() {
                                     </tbody>
                                 </table>
                             </div>
+                            {/* CHANGED: hard-coded "4-year" → dynamic from API */}
                             <p className="mt-3 text-xs text-slate-400 dark:text-slate-600">
-                                Baseline = 4-year historical average for current season
+                                Baseline = {baseline?.baseline_window ?? "2023–2025 (post-harvest: 2022–2025 fallback)"}
                                 &nbsp;·&nbsp; Prices in MWK/KG
                             </p>
                         </>
                     )
                 )}
 
-                {/* ── DISTRICT BASELINE ────────────────────────────────────────── */}
+                {/* ── DISTRICT BASELINE ─────────────────────────────────── */}
                 {tab === "baseline" && (
                     <div className="space-y-4">
 
                         {/* commodity pills */}
                         <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
-              <span className="text-xs text-slate-400 dark:text-slate-600
-                               uppercase tracking-widest">
-                Commodity
-              </span>
+                            <span className="text-xs text-slate-400 dark:text-slate-600
+                                             uppercase tracking-widest">
+                                Commodity
+                            </span>
                             {FORECAST_COMMODITIES.map(c => (
                                 <button key={c} onClick={() => setCommodity(c)}
                                         className={`text-xs px-3 py-1 rounded-full border
-                                    transition-colors ${
+                                                    transition-colors ${
                                             commodity === c
                                                 ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100"
                                                 : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-500"
@@ -372,7 +410,7 @@ export default function SeasonPanel() {
                             ))}
                         </div>
 
-                        {/* metric cards */}
+                        {/* KPI cards — CHANGED: baseline.districts → rows */}
                         {baseline && (
                             <div className="grid gap-3 mb-2"
                                  style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
@@ -385,13 +423,13 @@ export default function SeasonPanel() {
                                     },
                                     {
                                         label: "Reporting",
-                                        value: `${reporting} / ${baseline.districts.length}`,
+                                        value: `${reporting} / ${rows.length}`,
                                         cls  : "text-slate-800 dark:text-slate-200",
                                         size : "text-xl",
                                     },
                                     {
                                         label: "Above baseline",
-                                        value: `${aboveBaseline} districts`,
+                                        value: `${aboveBaseline} commodities`,
                                         cls  : "text-red-600 dark:text-red-400",
                                         size : "text-xl",
                                     },
@@ -408,9 +446,9 @@ export default function SeasonPanel() {
                                 ].map(card => (
                                     <div key={card.label}
                                          className="bg-slate-50 dark:bg-slate-800/60 rounded-xl
-                                  p-4 min-h-[80px]">
+                                                     p-4 min-h-[80px]">
                                         <p className="text-xs text-slate-400 dark:text-slate-500
-                                  uppercase tracking-wider mb-1.5">
+                                                       uppercase tracking-wider mb-1.5">
                                             {card.label}
                                         </p>
                                         <p className={`font-semibold ${card.size} ${card.cls}`}>
@@ -425,23 +463,24 @@ export default function SeasonPanel() {
 
                         {!loadingBase && baseline && (
                             <div className="rounded-xl border border-slate-200
-                              dark:border-slate-700 overflow-hidden">
+                                            dark:border-slate-700 overflow-hidden">
                                 <table className="w-full border-collapse"
                                        style={{ tableLayout: "fixed" }}>
                                     <colgroup>
-                                        <col style={{ width: "17%" }}/>
-                                        <col style={{ width: "9%" }}/>
+                                        <col style={{ width: "20%" }}/>
                                         <col style={{ width: "10%" }}/>
                                         <col style={{ width: "10%" }}/>
                                         <col style={{ width: "10%" }}/>
                                         <col style={{ width: "10%" }}/>
                                         <col style={{ width: "10%" }}/>
-                                        <col style={{ width: "14%" }}/>
+                                        <col style={{ width: "15%" }}/>
                                     </colgroup>
                                     <thead>
                                     <tr>
-                                        <TH>District</TH>
-                                        <TH>Region</TH>
+                                        {/* CHANGED: "District" → "Commodity"
+                                                This tab now shows commodities, not districts.
+                                                District baseline lives at /district/:name */}
+                                        <TH>Commodity</TH>
                                         {SEASONS.map(s => (
                                             <TH key={s} right blue={s === baseline.current_season}>
                                                 {s === "Post-harvest" ? "Post-harv." : s}
@@ -452,40 +491,40 @@ export default function SeasonPanel() {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {baseline.districts.map((d, i) => {
+                                    {/* CHANGED: baseline.districts → rows
+                                            CHANGED: d.seasons[s]?.avg_price →
+                                                     d[seasonFieldFor(s)] (flat field) */}
+                                    {rows.map((d, i) => {
                                         const pp = pctPill(d.pct_vs_baseline)
                                         return (
                                             <tr key={i}
                                                 className="hover:bg-slate-50 dark:hover:bg-slate-800/40
-                                       transition-colors">
+                                                               transition-colors">
                                                 <TD>
                                                     <div className="font-medium text-slate-800
-                                            dark:text-slate-200 text-xs">
-                                                        {d.district}
+                                                                        dark:text-slate-200 text-xs">
+                                                        {d.commodity}
                                                     </div>
-                                                    {/* ← pass maxPct so bars are relative */}
                                                     <DeviationBar pct={d.pct_vs_baseline} max={maxPct}/>
                                                 </TD>
-                                                <TD muted>
-                                                    {d.region?.replace(" Region", "") ?? "—"}
-                                                </TD>
+                                                {/* CHANGED: reads flat fields via seasonFieldFor() */}
                                                 {SEASONS.map(s => (
                                                     <TD key={s} right mono
                                                         muted={s !== baseline.current_season}>
-                              <span className={
-                                  s === baseline.current_season
-                                      ? "text-blue-600 dark:text-blue-400 font-medium"
-                                      : ""
-                              }>
-                                {fmt(d.seasons[s]?.avg_price)}
-                              </span>
+                                                            <span className={
+                                                                s === baseline.current_season
+                                                                    ? "text-blue-600 dark:text-blue-400 font-medium"
+                                                                    : ""
+                                                            }>
+                                                                {fmt(d[seasonFieldFor(s)])}
+                                                            </span>
                                                     </TD>
                                                 ))}
                                                 <TD right mono>
-                            <span className="font-medium text-slate-800
-                                             dark:text-slate-200">
-                              {fmt(d.current_price)}
-                            </span>
+                                                        <span className="font-medium text-slate-800
+                                                                         dark:text-slate-200">
+                                                            {fmt(d.current_price)}
+                                                        </span>
                                                 </TD>
                                                 <TD right>
                                                     {pp && d.pct_vs_baseline !== null ? (
@@ -504,10 +543,11 @@ export default function SeasonPanel() {
                                     </tbody>
                                 </table>
                                 <div className="px-4 py-2.5 border-t border-slate-100
-                                dark:border-slate-800">
+                                                dark:border-slate-800">
+                                    {/* CHANGED: dynamic baseline_window from API */}
                                     <p className="text-xs text-slate-400 dark:text-slate-600">
-                                        Sorted by deviation from seasonal norm
-                                        &nbsp;·&nbsp; Baseline = 4-year {baseline.current_season} average
+                                        Baseline = {baseline.baseline_window}
+                                        &nbsp;·&nbsp; Sorted by deviation from seasonal norm
                                         &nbsp;·&nbsp; MWK/KG
                                     </p>
                                 </div>
