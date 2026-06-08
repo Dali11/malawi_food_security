@@ -14,19 +14,12 @@ interface HeaderProps {
 }
 
 const TABS = [
-  { id: "dashboard",  label: "Dashboard",       href: "/"           },
-<<<<<<< Updated upstream
-  { id: "forecast",  label: "Forecast",         href: "/forecast"    },
-  { id: "heatmap",    label: "Heatmap",         href: "/heatmap"    },
-  { id: "season",     label: "Season baseline", href: "/season"     },
-  { id: "indicators", label: "Indicators",      href: "/indicators" },
-    { id: "reports", label: "Reports", href: "/reports" },
-=======
-  {id: "forecast",    label: "Forecast",        href: "/forecast"   },
-  { id: "heatmap",    label: "Heatmap",         href: "/heatmap"    },
-  { id: "season",     label: "Season baseline", href: "/season"     },
-  { id: "indicators", label: "Indicators",      href: "/indicators" }
->>>>>>> Stashed changes
+    { id: "dashboard",  label: "Dashboard",       href: "/"           },
+    { id: "forecast",   label: "Forecast",         href: "/forecast"  },
+    { id: "heatmap",    label: "Heatmap",          href: "/heatmap"   },
+    { id: "season",     label: "Season baseline",  href: "/season"    },
+    { id: "indicators", label: "Indicators",       href: "/indicators"},
+    { id: "reports",    label: "Reports",          href: "/reports"   },
 ]
 
 export default function Header({ activePage = "dashboard" }: HeaderProps) {
