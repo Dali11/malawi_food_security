@@ -7,6 +7,10 @@ import { ForecastChart }  from "./ForecastChart"
 import { riskBg, riskColor } from "@/lib/hooks/useColor"
 
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 // ── Main drawer ───────────────────────────────────────────────
 export default function ForecastDrawer({
   district,
