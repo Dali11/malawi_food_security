@@ -1,21 +1,21 @@
 "use client"
 import { useEffect, useState } from "react"
 import {
-  MapContainer, TileLayer, GeoJSON,
-  CircleMarker, Popup, useMap
+    MapContainer, TileLayer, GeoJSON,
+    CircleMarker, Popup, useMap
 } from "react-leaflet"
 import MarkerClusterGroup from "react-leaflet-cluster"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 import type { Feature, GeoJsonObject } from "geojson"
 import type {
-  DistrictCollection, MarketCollection,
-  SpikeCollection,
-  LeafletMapProps
+    DistrictCollection, MarketCollection,
+    SpikeCollection,
+    LeafletMapProps
 } from "@/lib/types"
 import {
-  getDistricts, getMarkets, getSpikes,
-  getRiskColor, getSeverityColor, getDistrict
+    getDistricts, getMarkets, getSpikes,
+    getRiskColor, getSeverityColor, getDistrict
 } from "@/lib/api"
 import { useTheme } from "@/components/ThemeProvider"
 
@@ -23,223 +23,266 @@ import { useTheme } from "@/components/ThemeProvider"
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl      : "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl    : "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+    iconUrl      : "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+    shadowUrl    : "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 })
 
 const MALAWI_BOUNDS: L.LatLngBoundsExpression = [
-  [-17.13, 33.8],
-  [-9.36,  35.5],
+    [-17.13, 33.8],
+    [-9.36,  35.5],
 ]
 
 /* ── Move zoom control to topright on mobile ─────────────────────────────── */
 function ResponsiveZoomControl() {
-  const map = useMap()
-  useEffect(() => {
-    // zoomControl is already disabled on MapContainer — just add on correct side
-    let zoomCtrl: L.Control.Zoom | null = null
+    const map = useMap()
+    useEffect(() => {
+        let zoomCtrl: L.Control.Zoom | null = null
 
-    function addZoom() {
-      if (zoomCtrl) { zoomCtrl.remove(); zoomCtrl = null }
-      const position = window.innerWidth < 768 ? "topright" : "topleft"
-      zoomCtrl = L.control.zoom({ position }).addTo(map)
-    }
+        function addZoom() {
+            if (zoomCtrl) { zoomCtrl.remove(); zoomCtrl = null }
+            const position = window.innerWidth < 768 ? "topright" : "topleft"
+            zoomCtrl = L.control.zoom({ position }).addTo(map)
+        }
 
-    addZoom()
-    window.addEventListener("resize", addZoom)
-    return () => {
-      window.removeEventListener("resize", addZoom)
-      if (zoomCtrl) zoomCtrl.remove()
-    }
-  }, [map])
-  return null
+        addZoom()
+        window.addEventListener("resize", addZoom)
+        return () => {
+            window.removeEventListener("resize", addZoom)
+            if (zoomCtrl) zoomCtrl.remove()
+        }
+    }, [map])
+    return null
 }
 
 function FitMalawi() {
-  const map = useMap()
-  useEffect(() => {
-    map.fitBounds(MALAWI_BOUNDS, { padding: [10, 10] })
-  }, [map])
-  return null
+    const map = useMap()
+    useEffect(() => {
+        map.fitBounds(MALAWI_BOUNDS, { padding: [10, 10] })
+    }, [map])
+    return null
 }
 
 export default function LeafletMap({
-  onDistrictClick,
-  severityFilter,
-  basemap,
-}: LeafletMapProps) {
-  const [districts, setDistricts] = useState<DistrictCollection | null>(null)
-  const [markets,   setMarkets  ] = useState<MarketCollection   | null>(null)
-  const [spikes,    setSpikes   ] = useState<SpikeCollection    | null>(null)
-  const [loading,   setLoading  ] = useState(true)
-  const { theme } = useTheme()
+                                       onDistrictClick,
+                                       severityFilter,
+                                       basemap,
+                                   }: LeafletMapProps) {
+    const [districts, setDistricts] = useState<DistrictCollection | null>(null)
+    const [markets,   setMarkets  ] = useState<MarketCollection   | null>(null)
+    const [spikes,    setSpikes   ] = useState<SpikeCollection    | null>(null)
+    const [loading,   setLoading  ] = useState(true)
+    const { theme } = useTheme()
 
-  useEffect(() => {
-    async function loadBase() {
-      try {
-        const [d, m] = await Promise.all([getDistricts(), getMarkets()])
-        setDistricts(d)
-        setMarkets(m)
-      } catch (err) {
-        console.error("Failed to load base layers:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadBase()
-  }, [])
-
-  useEffect(() => {
-    const params = severityFilter === "All" ? {} : { severity: severityFilter }
-    getSpikes(params).then(setSpikes).catch(console.error)
-  }, [severityFilter])
-
-  function districtStyle(feature?: Feature) {
-    const score = feature?.properties?.risk_score ?? 0
-    return {
-      fillColor  : getRiskColor(score),
-      fillOpacity: 0.75,
-      color      : "#ebe4e4",
-      weight     : 1.2,
-    }
-  }
-
-  function onEachDistrict(feature: Feature, layer: L.Layer) {
-    const p = feature.properties ?? {}
-    layer.on({
-      mouseover: (e) => {
-        const l = e.target as L.Path
-        l.setStyle({
-          fillColor  : getRiskColor(p.risk_score),
-          fillOpacity: 0.4,
-          weight     : 2.5,
-        })
-      },
-      mouseout: (e) => {
-        const l = e.target as L.Path
-        l.setStyle(districtStyle(feature))
-      },
-      click: async () => {
-        try {
-          const detail = await getDistrict(p.district)
-          onDistrictClick(detail)
-        } catch (err) {
-          console.error("District detail failed:", err)
+    useEffect(() => {
+        async function loadBase() {
+            try {
+                const [d, m] = await Promise.all([getDistricts(), getMarkets()])
+                setDistricts(d)
+                setMarkets(m)
+            } catch (err) {
+                console.error("Failed to load base layers:", err)
+            } finally {
+                setLoading(false)
+            }
         }
-      }
-    })
-    layer.bindTooltip(
-      `<b>${p.district}</b><br/>Risk: ${p.risk_score} | Critical: ${p.critical_count}`,
-      { sticky: true, className: "map-tooltip" }
-    )
-  }
+        loadBase()
+    }, [])
 
-  if (loading) {
+    useEffect(() => {
+        const params = severityFilter === "All" ? {} : { severity: severityFilter }
+        getSpikes(params).then(setSpikes).catch(console.error)
+    }, [severityFilter])
+
+    function districtStyle(feature?: Feature) {
+        const score = feature?.properties?.risk_score ?? 0
+        return {
+            fillColor  : getRiskColor(score),
+            fillOpacity: 0.75,
+            color      : "#ebe4e4",
+            weight     : 1.2,
+        }
+    }
+
+    function onEachDistrict(feature: Feature, layer: L.Layer) {
+        const p = feature.properties ?? {}
+        layer.on({
+            mouseover: (e) => {
+                const l = e.target as L.Path
+                l.setStyle({
+                    fillColor  : getRiskColor(p.risk_score),
+                    fillOpacity: 0.4,
+                    weight     : 2.5,
+                })
+            },
+            mouseout: (e) => {
+                const l = e.target as L.Path
+                l.setStyle(districtStyle(feature))
+            },
+            click: async () => {
+                try {
+                    const detail = await getDistrict(p.district)
+                    onDistrictClick(detail)
+                } catch (err) {
+                    console.error("District detail failed:", err)
+                }
+            }
+        })
+        layer.bindTooltip(
+            `<b>${p.district}</b><br/>Risk: ${p.risk_score} | Critical: ${p.critical_count}`,
+            { sticky: true, className: "map-tooltip" }
+        )
+    }
+
+    if (loading) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+                <p className="text-slate-500 dark:text-slate-400 font-mono text-sm animate-pulse">
+                    Loading spatial layers...
+                </p>
+            </div>
+        )
+    }
+
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
-        <p className="text-slate-500 dark:text-slate-400 font-mono text-sm animate-pulse">
-          Loading spatial layers...
-        </p>
-      </div>
+        <MapContainer
+            bounds={MALAWI_BOUNDS}
+            boundsOptions={{ padding: [10, 10] }}
+            className="w-full h-full"
+            zoomControl={false}
+        >
+            <TileLayer
+                key={`${basemap.name}-${theme}`}
+                url={theme === "dark" ? basemap.urlDark : basemap.urlLight}
+                attribution={`&copy; ${basemap.attr}`}
+            />
+            <FitMalawi />
+            <ResponsiveZoomControl />
+
+            {/* District choropleth */}
+            {districts && (
+                <GeoJSON
+                    key="districts"
+                    data={districts as unknown as GeoJsonObject}
+                    style={districtStyle}
+                    onEachFeature={onEachDistrict}
+                />
+            )}
+
+            {/* Market points — clustered */}
+            <MarkerClusterGroup chunkedLoading maxClusterRadius={30}>
+                {markets?.features.map((f, i) => {
+                    const [lng, lat] = f.geometry.coordinates
+                    const p = f.properties
+                    return (
+                        <CircleMarker
+                            key={`market-${i}`}
+                            center={[lat, lng]}
+                            radius={6}
+                            pane="markerPane"
+                            pathOptions={{
+                                color      : "#ffffff",
+                                weight     : 1.5,
+                                fillColor  : "#1565C0",
+                                fillOpacity: 1,
+                            }}
+                        >
+                            <Popup>
+                                <div className="text-xs space-y-1">
+                                    <div className="font-bold text-sm">{p.market}</div>
+                                    <div>District: {p.district}</div>
+                                    <div>Commodities: {p.num_commodities}</div>
+                                    <div>Total spikes: {p.total_spikes}</div>
+                                    <div>Spike rate: {p.spike_rate_pct}%</div>
+                                    <div>Critical events: {p.critical_count}</div>
+                                </div>
+                            </Popup>
+                        </CircleMarker>
+                    )
+                })}
+            </MarkerClusterGroup>
+
+            {/* Spike markers — clustered */}
+            <MarkerClusterGroup chunkedLoading maxClusterRadius={25}>
+                {spikes?.features.map((f, i) => {
+                    const [lng, lat] = f.geometry.coordinates
+                    const p = f.properties
+                    const color = getSeverityColor(p.spike_severity)   // ← defined before return
+                    return (
+                        <CircleMarker
+                            key={`spike-${i}`}
+                            center={[lat, lng]}
+                            radius={8}
+                            pane="tooltipPane"
+                            pathOptions={{
+                                color      : "#ffffff",
+                                weight     : 1.5,
+                                fillColor  : color,
+                                fillOpacity: 1,
+                            }}
+                        >
+                            <Popup>
+                                <div className="text-xs space-y-1 min-w-[200px]">
+
+                                    {/* Header */}
+                                    <div className="font-bold text-sm pb-1 border-b border-slate-200"
+                                         style={{ color }}>
+                                        ⚠ {p.spike_severity} Spike
+                                    </div>
+
+                                    <div>Market: <b>{p.market}</b></div>
+                                    <div>District: {p.district}</div>
+                                    <div>Commodity: <b>{p.commodity}</b></div>
+
+                                    {/* Historical spike details */}
+                                    <div className="pt-1 border-t border-slate-100">
+                                        <div className="text-slate-400 uppercase tracking-wide text-[10px] mb-0.5">
+                                            Recorded spike · {p.date}
+                                        </div>
+                                        <div>
+                                            Price: <b>
+                                            {p.price_mwk != null ? p.price_mwk.toLocaleString() : "—"} MWK/{p.unit === "L" ? "litre" : "kg"}
+                                        </b>
+                                        </div>
+                                        <div>
+                                            Jump: <b style={{ color }}>+{p.pct_change}%</b>
+                                            &nbsp;· Z-score: {p.zscore}
+                                        </div>
+                                    </div>
+
+                                    {/* Current price */}
+                                    {p.current_price_mwk != null &&
+                                        !(p.current_price_mwk === p.price_mwk && p.current_date === p.date) && (
+                                        <div className="pt-1 border-t border-slate-100">
+                                            <div className="text-slate-400 uppercase tracking-wide text-[10px] mb-0.5">
+                                                Current · {p.current_date}
+                                            </div>
+                                            <div>
+                                                Price: <b>
+                                                {p.current_price_mwk.toLocaleString()} MWK/{p.unit === "L" ? "litre" : "kg"}
+                                            </b>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                Status:&nbsp;
+                                                <span style={{
+                                                    color: p.current_severity === "Critical" ? "#ef4444"
+                                                        : p.current_severity === "Severe"   ? "#f97316"
+                                                            : p.current_severity === "Moderate" ? "#eab308"
+                                                                : "#22c55e"
+                                                }}>
+        ● {p.current_severity === "Normal" ? "Stable" : p.current_severity}
+      </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                </div>
+                            </Popup>
+                        </CircleMarker>
+                    )
+                })}
+            </MarkerClusterGroup>
+
+        </MapContainer>
     )
-  }
-
-  return (
-    <MapContainer
-      bounds={MALAWI_BOUNDS}
-      boundsOptions={{ padding: [10, 10] }}
-      className="w-full h-full"
-      zoomControl={false}      
-    >
-      <TileLayer
-        key={`${basemap.name}-${theme}`}
-        url={theme === "dark" ? basemap.urlDark : basemap.urlLight}
-        attribution={`&copy; ${basemap.attr}`}
-      />
-      <FitMalawi />
-      <ResponsiveZoomControl />   {/* ← topright on mobile, topleft on desktop */}
-
-      {/* District choropleth */}
-      {districts && (
-        <GeoJSON
-          key="districts"
-          data={districts as unknown as GeoJsonObject}
-          style={districtStyle}
-          onEachFeature={onEachDistrict}
-        />
-      )}
-
-      {/* Market points — clustered */}
-      <MarkerClusterGroup chunkedLoading maxClusterRadius={30}>
-        {markets?.features.map((f, i) => {
-          const [lng, lat] = f.geometry.coordinates
-          const p = f.properties
-          return (
-            <CircleMarker
-              key={`market-${i}`}
-              center={[lat, lng]}
-              radius={6}
-              pane="markerPane"
-              pathOptions={{
-                color      : "#ffffff",
-                weight     : 1.5,
-                fillColor  : "#1565C0",
-                fillOpacity: 1,
-              }}
-            >
-              <Popup>
-                <div className="text-xs space-y-1">
-                  <div className="font-bold text-sm">{p.market}</div>
-                  <div>District: {p.district}</div>
-                  <div>Commodities: {p.num_commodities}</div>
-                  <div>Total spikes: {p.total_spikes}</div>
-                  <div>Spike rate: {p.spike_rate_pct}%</div>
-                  <div>Critical events: {p.critical_count}</div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          )
-        })}
-      </MarkerClusterGroup>
-
-      {/* Spike markers — clustered */}
-      <MarkerClusterGroup chunkedLoading maxClusterRadius={25}>
-        {spikes?.features.map((f, i) => {
-          const [lng, lat] = f.geometry.coordinates
-          const p = f.properties
-          const color = getSeverityColor(p.spike_severity)
-          return (
-            <CircleMarker
-              key={`spike-${i}`}
-              center={[lat, lng]}
-              radius={8}
-              pane="tooltipPane"
-              pathOptions={{
-                color      : "#ffffff",
-                weight     : 1.5,
-                fillColor  : color,
-                fillOpacity: 1,
-              }}
-            >
-              <Popup>
-                <div className="text-xs space-y-1">
-                  <div className="font-bold text-sm" style={{ color }}>
-                    ⚠ {p.spike_severity} Spike
-                  </div>
-                  <div>Market: <b>{p.market}</b></div>
-                  <div>District: {p.district}</div>
-                  <div>Commodity: <b>{p.commodity}</b></div>
-                  <div>Price: {p.price_mwk.toLocaleString()} MWK</div>
-                  <div>Jump: <b style={{ color }}>+{p.pct_change}%</b></div>
-                  <div>Z-score: {p.zscore}</div>
-                  <div>Date: {p.date}</div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          )
-        })}
-      </MarkerClusterGroup>
-    </MapContainer>
-  )
 }

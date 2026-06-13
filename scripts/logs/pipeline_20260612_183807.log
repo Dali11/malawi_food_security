@@ -1,0 +1,42 @@
+2026-06-12 18:38:07,548 | INFO | ============================================================
+2026-06-12 18:38:07,550 | INFO | MALAWI FOOD SECURITY — DATA UPDATE PIPELINE
+2026-06-12 18:38:07,550 | INFO | Run started: 2026-06-12 18:38:07
+2026-06-12 18:38:07,550 | INFO | ============================================================
+2026-06-12 18:38:07,550 | INFO | Connecting to database...
+2026-06-12 18:38:22,303 | INFO | Connected successfully
+2026-06-12 18:38:22,303 | INFO | Downloading latest WFP data from HDX...
+2026-06-12 18:38:38,794 | INFO | Downloaded 79,285 total records
+2026-06-12 18:38:38,835 | INFO | Fetching existing row keys from database...
+2026-06-12 18:38:45,862 | INFO | Found 28,284 existing row keys in database
+2026-06-12 18:38:45,862 | INFO | Fetching existing informal row keys from database...
+2026-06-12 18:38:49,509 | INFO | Found 11,227 existing informal row keys in database
+2026-06-12 18:38:49,509 | INFO | Cleaning and filtering new data...
+2026-06-12 18:38:57,838 | INFO | Standardised records in download : 28,284
+2026-06-12 18:38:57,838 | INFO | New records (unseen keys)        : 0
+2026-06-12 18:38:57,839 | INFO | Informal records found           : 11,227
+2026-06-12 18:38:57,839 | INFO | No new rows — will check for price revisions on existing rows...
+2026-06-12 18:38:57,844 | INFO | Checking for price revisions on existing rows...
+2026-06-12 18:39:13,154 | INFO | No price revisions found — database is truly up to date
+2026-06-12 18:39:13,214 | INFO | No new informal records — already up to date
+2026-06-12 18:39:14,493 | ERROR | Pipeline failed: column "new_informal" of relation "pipeline_log" does not exist
+LINE 3: ...          (new_records, new_spikes, new_critical, new_inform...
+                                                             ^
+Traceback (most recent call last):
+  File "C:\Users\NAME\malawi_food_security\scripts\update_pipeline.py", line 613, in run_pipeline
+    log_pipeline_run(conn, stats)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\NAME\malawi_food_security\scripts\update_pipeline.py", line 552, in log_pipeline_run
+    cur.execute("""
+    ~~~~~~~~~~~^^^^
+                INSERT INTO pipeline_log
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+                    stats.get('notes',        '')
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                ))
+                ^^
+psycopg2.errors.UndefinedColumn: column "new_informal" of relation "pipeline_log" does not exist
+LINE 3: ...          (new_records, new_spikes, new_critical, new_inform...
+                                                             ^
+
+2026-06-12 18:39:15,813 | INFO | Database connection closed
