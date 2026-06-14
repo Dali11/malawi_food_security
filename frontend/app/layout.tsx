@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import Script from "next/script"
 import { ThemeProvider } from "@/components/ThemeProvider"
+import DataStaleBanner from "@/components/dashboard/DataStaleBanner";
 
 export const metadata: Metadata = {
     title      : "Malawi Food Security Monitor",
@@ -25,6 +26,7 @@ export default function RootLayout({
             } catch(e) {}
           })()
         `}</Script>
+        <DataStaleBanner />
         <ThemeProvider>
             {children}
         </ThemeProvider>
