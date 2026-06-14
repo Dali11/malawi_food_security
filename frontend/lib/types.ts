@@ -112,14 +112,19 @@ export interface MarketCollection {
 // ── Spike ──────────────────────────────────────────────────────────────────
 
 export interface SpikeProperties {
-  district       : string
-  market         : string
-  commodity      : string
-  price_mwk      : number
-  pct_change     : number
-  zscore         : number
-  spike_severity : "Critical" | "Severe" | "Moderate"
-  date           : string
+    district         : string
+    market           : string
+    commodity        : string
+    price_mwk        : number
+    pct_change       : number
+    zscore           : number
+    spike_severity   : "Critical" | "Severe" | "Moderate"
+    date             : string
+    unit             : string | null
+    current_price_mwk: number | null
+    current_date     : string | null
+    current_severity : string | null
+    current_pct_change: number | null
 }
 
 export interface SpikeFeature {

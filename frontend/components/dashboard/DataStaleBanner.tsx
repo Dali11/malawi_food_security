@@ -32,7 +32,7 @@ const DataStaleBanner = () => {
             <span className="text-amber-800 text-xs">
                 <b>Data is {status.days_stale} days old.</b>{" "}
                 Latest available prices are from <b>{formatted}</b>.{" "}
-                WFP updates HDX monthly.
+                WFP HDX has not yet published newer data — pipeline is up to date.
             </span>
         </div>
     )
