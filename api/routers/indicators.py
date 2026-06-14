@@ -443,3 +443,31 @@ async def get_spike_distribution():
             }
             for r in rows
         ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8.  DATA STATUS  —  staleness check for banner
+# ─────────────────────────────────────────────────────────────────────────────
+@router.get("/status")
+async def get_data_status():
+    """
+    Returns latest data date and staleness info for the frontend banner.
+    Stale threshold: 45 days.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        latest_date = await conn.fetchval("""
+                                          SELECT MAX(date)::text FROM prices
+                                          """)
+
+    from datetime import date, datetime
+    today        = date.today()
+    latest       = datetime.strptime(latest_date, "%Y-%m-%d").date()
+    days_stale   = (today - latest).days
+    threshold    = 45
+
+    return {
+        "latest_date" : latest_date,
+        "days_stale"  : days_stale,
+        "is_stale"    : days_stale > threshold,
+        "threshold"   : threshold,
+    }
