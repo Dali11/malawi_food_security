@@ -40,6 +40,7 @@ def _season(month: int) -> str:
     if month in [6, 7, 8]:      return "Post-harvest period"
     return "Lean season"
 
+
 def _run_prophet(df: pd.DataFrame, months: int) -> pd.DataFrame:
     from prophet import Prophet
 
@@ -50,7 +51,6 @@ def _run_prophet(df: pd.DataFrame, months: int) -> pd.DataFrame:
     df_prophet = df_prophet.dropna().sort_values("ds").reset_index(drop=True)
 
     # ── Fill gaps with interpolation ──────────────────────────
-    # Create complete monthly date range
     full_range = pd.date_range(
         start=df_prophet["ds"].min(),
         end=df_prophet["ds"].max(),
@@ -58,20 +58,18 @@ def _run_prophet(df: pd.DataFrame, months: int) -> pd.DataFrame:
     )
     df_full = pd.DataFrame({"ds": full_range})
     df_full = df_full.merge(df_prophet, on="ds", how="left")
-
-    # Linear interpolation for missing months
     df_full["y"] = df_full["y"].interpolate(method="linear")
     df_full["y"] = df_full["y"].clip(lower=50)
 
     # ── Logistic growth bounds ────────────────────────────────
-    last_price      = df_prophet["y"].iloc[-1]
-    df_full["cap"]  = last_price * 2.2
-    df_full["floor"]= last_price * 0.4
+    last_price       = df_prophet["y"].iloc[-1]
+    df_full["cap"]   = last_price * 2.2
+    df_full["floor"] = last_price * 0.4
 
     # ── Prophet model ─────────────────────────────────────────
     date_range_months = (
-        (df_full["ds"].max().year - df_full["ds"].min().year) * 12 +
-        df_full["ds"].max().month - df_full["ds"].min().month
+            (df_full["ds"].max().year - df_full["ds"].min().year) * 12 +
+            df_full["ds"].max().month - df_full["ds"].min().month
     )
     has_full_year = date_range_months >= 12
 
@@ -114,9 +112,38 @@ def _run_prophet(df: pd.DataFrame, months: int) -> pd.DataFrame:
     return future_forecast
 
 
+def _run_seasonal_naive(df: pd.DataFrame, months: int) -> pd.DataFrame:
+    """
+    Seasonal naive forecast for districts with < 20 months of data.
+    Uses same-month average from available history as the forecast.
+    Confidence band = ±15%.
+    """
+    df = df.copy()
+    df["date"]  = pd.to_datetime(df["date"])
+    df["month"] = df["date"].dt.month
+
+    monthly_avg = df.groupby("month")["avg_price"].mean()
+    last_date   = df["date"].max()
+    last_price  = float(df["avg_price"].iloc[-1])
+
+    records = []
+    for i in range(1, months + 1):
+        next_date  = last_date + pd.DateOffset(months=i)
+        month_num  = next_date.month
+        base_price = float(monthly_avg.get(month_num, last_price))
+        records.append({
+            "ds"         : next_date,
+            "yhat"       : base_price,
+            "yhat_lower" : base_price * 0.85,
+            "yhat_upper" : base_price * 1.15,
+        })
+
+    return pd.DataFrame(records)
+
+
 def _run_forecast(df: pd.DataFrame, months: int) -> pd.DataFrame:
     """
-    Use Prophet if 20+ months available, 
+    Use Prophet if 20+ months available,
     otherwise use seasonal naive forecast.
     """
     if len(df) >= 20:
@@ -124,80 +151,65 @@ def _run_forecast(df: pd.DataFrame, months: int) -> pd.DataFrame:
     else:
         return _run_seasonal_naive(df, months)
 
+
 @router.get("/{district_name}")
 async def forecast_district(
-    district_name: str,
-    commodity: str = Query(default="Maize", description="Commodity to forecast"),
-    months:    int = Query(default=3,       description="Months ahead to forecast", ge=1, le=6),
+        district_name: str,
+        commodity: str = Query(default="Maize", description="Commodity to forecast"),
+        months:    int = Query(default=3,       description="Months ahead to forecast", ge=1, le=6),
 ):
     """
     Generate a 3-month price forecast for a district-commodity pair.
-    Uses Facebook Prophet with 6 years of historical WFP price data.
+    Uses Facebook Prophet (20+ months) or seasonal naive (< 20 months).
     """
 
-    # Validate district exists
     pool = await get_pool()
     async with pool.acquire() as conn:
 
+        # Validate district exists
         district_check = await conn.fetchrow("""
-            SELECT name_1 FROM districts_risk
-            WHERE LOWER(name_1) = LOWER($1)
-        """, district_name)
+                                             SELECT name_1 FROM districts_risk
+                                             WHERE LOWER(name_1) = LOWER($1)
+                                             """, district_name)
 
         if not district_check:
             raise HTTPException(status_code=404,
                                 detail=f"District '{district_name}' not found")
 
-        # Fetch monthly average prices
+        # Fetch monthly average prices — relaxed filter, take all available data
         rows = await conn.fetch("""
-            WITH monthly AS (
-                SELECT
-                    DATE_TRUNC('month', date::date)::date AS date,
-                    ROUND(AVG(price::numeric), 2)          AS avg_price,
-                    COUNT(*)                               AS observations
-                FROM prices
-                WHERE LOWER(district)  = LOWER($1)
-                AND LOWER(commodity) = LOWER($2)
-                AND unit = 'KG'
-                AND price IS NOT NULL
-                AND price::numeric > 50
-                GROUP BY DATE_TRUNC('month', date::date)
-                HAVING COUNT(*) >= 2
-            )
-            SELECT * FROM monthly
-            WHERE date >= (
-                -- Use data from the year where we have at least 6 months coverage
-                SELECT DATE_TRUNC('year', month)::date
-                FROM (
-                    SELECT DATE_TRUNC('month', date::date) AS month
-                    FROM monthly
-                    GROUP BY DATE_TRUNC('month', date::date)
-                ) m
-                GROUP BY DATE_TRUNC('year', month)
-                HAVING COUNT(*) >= 6
-                ORDER BY DATE_TRUNC('year', month) DESC
-                LIMIT 1
-            )
-            ORDER BY date
-        """, district_name, commodity)
+                                SELECT
+                                    DATE_TRUNC('month', date::date)::date AS date,
+                ROUND(AVG(price::numeric), 2)          AS avg_price,
+                COUNT(*)                               AS observations
+                                FROM prices
+                                WHERE LOWER(district)  = LOWER($1)
+                                  AND LOWER(commodity) = LOWER($2)
+                                  AND unit             = 'KG'
+                                  AND price IS NOT NULL
+                                  AND price::numeric   > 50
+                                GROUP BY DATE_TRUNC('month', date::date)
+                                HAVING COUNT(*) >= 1
+                                ORDER BY date
+                                """, district_name, commodity)
 
         # Get baseline (12-month average of most recent data)
         baseline_row = await conn.fetchrow("""
-            SELECT ROUND(AVG(price::numeric), 2) AS baseline
-            FROM prices
-            WHERE LOWER(district)  = LOWER($1)
-              AND LOWER(commodity) = LOWER($2)
-              AND unit = 'KG'
-              AND date::date >= (
-                  SELECT MAX(date::date) - INTERVAL '12 months' FROM prices
-              )
-        """, district_name, commodity)
+                                           SELECT ROUND(AVG(price::numeric), 2) AS baseline
+                                           FROM prices
+                                           WHERE LOWER(district)  = LOWER($1)
+                                             AND LOWER(commodity) = LOWER($2)
+                                             AND unit = 'KG'
+                                             AND date::date >= (
+                                               SELECT MAX(date::date) - INTERVAL '12 months' FROM prices
+                                               )
+                                           """, district_name, commodity)
 
-    if not rows or len(rows) < 6:
+    if not rows or len(rows) < 3:
         raise HTTPException(
             status_code=422,
-            detail=f"Insufficient recent data to forecast {commodity} in {district_name}. "
-                f"Need at least 6 months of consistent data."
+            detail=f"Insufficient data to forecast {commodity} in {district_name}. "
+                   f"Need at least 3 months of price data."
         )
 
     # Build dataframe
@@ -205,29 +217,34 @@ async def forecast_district(
     df["avg_price"] = pd.to_numeric(df["avg_price"], errors="coerce")
     df = df.dropna(subset=["avg_price"])
 
-    baseline = float(baseline_row["baseline"]) if baseline_row and baseline_row["baseline"] else df["avg_price"].mean()
+    baseline = (
+        float(baseline_row["baseline"])
+        if baseline_row and baseline_row["baseline"]
+        else float(df["avg_price"].mean())
+    )
 
-    # Run Prophet
+    # Run forecast — Prophet if enough data, seasonal naive otherwise
+    method = "Facebook Prophet" if len(df) >= 20 else "Seasonal naive"
     try:
-        forecast_df =  _run_prophet(df, months)
+        forecast_df = _run_forecast(df, months)
     except Exception as e:
-        log.error(f"Prophet failed for {district_name}/{commodity}: {e}")
+        log.error(f"Forecast failed for {district_name}/{commodity}: {e}")
         raise HTTPException(status_code=500,
                             detail=f"Forecasting failed: {str(e)}")
 
     # Build response
     forecast_points = []
     for _, row in forecast_df.iterrows():
-        month_dt   = pd.Timestamp(row["ds"])
-        risk       = _risk_level(row["yhat"], baseline)
+        month_dt = pd.Timestamp(row["ds"])
+        risk     = _risk_level(float(row["yhat"]), baseline)
         forecast_points.append({
-            "month"       : month_dt.strftime("%Y-%m"),
-            "month_label" : month_dt.strftime("%B %Y"),
-            "season"      : _season(month_dt.month),
-            "forecast"    : round(float(row["yhat"]),       0),
-            "lower_bound" : round(float(row["yhat_lower"]), 0),
-            "upper_bound" : round(float(row["yhat_upper"]), 0),
-            "risk_level"  : risk,
+            "month"          : month_dt.strftime("%Y-%m"),
+            "month_label"    : month_dt.strftime("%B %Y"),
+            "season"         : _season(month_dt.month),
+            "forecast"       : round(float(row["yhat"]),       0),
+            "lower_bound"    : round(float(row["yhat_lower"]), 0),
+            "upper_bound"    : round(float(row["yhat_upper"]), 0),
+            "risk_level"     : risk,
             "pct_vs_baseline": round(
                 (float(row["yhat"]) - baseline) / baseline * 100, 1
             ) if baseline > 0 else 0,
@@ -242,12 +259,11 @@ async def forecast_district(
     if len(forecast_points) >= 2:
         first_price = forecast_points[0]["forecast"]
         last_price  = forecast_points[-1]["forecast"]
-        trend = "rising" if last_price > first_price * 1.05 else \
-                "falling" if last_price < first_price * 0.95 else "stable"
+        trend = "rising"  if last_price > first_price * 1.05 else \
+            "falling" if last_price < first_price * 0.95 else "stable"
     else:
         trend = "stable"
 
-    # Summary insight for NGO analysts
     def _insight(alert: str, trend: str, commodity: str, months: int) -> str:
         period = f"next {months} month{'s' if months > 1 else ''}"
         if alert == "Critical":
@@ -280,8 +296,6 @@ async def forecast_district(
             f"No immediate intervention required."
         )
 
-    method = "Facebook Prophet"
-    
     return {
         "district"         : district_check["name_1"],
         "commodity"        : commodity,
@@ -302,20 +316,20 @@ async def list_forecastable(district_name: str = Query(...)):
     pool = await get_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT
-                commodity,
-                COUNT(*) AS months,
-                ROUND(AVG(price::numeric), 0) AS avg_price
-            FROM prices
-            WHERE LOWER(district) = LOWER($1)
-              AND unit = 'KG'
-              AND price IS NOT NULL
-            GROUP BY commodity
-            HAVING COUNT(*) >= 12
-            ORDER BY months DESC
-        """, district_name)
+                                SELECT
+                                    commodity,
+                                    COUNT(*)                              AS months,
+                                    ROUND(AVG(price::numeric), 0)         AS avg_price
+                                FROM prices
+                                WHERE LOWER(district) = LOWER($1)
+                                  AND unit = 'KG'
+                                  AND price IS NOT NULL
+                                GROUP BY commodity
+                                HAVING COUNT(*) >= 3
+                                ORDER BY months DESC
+                                """, district_name)
 
     return {
-        "district"    : district_name,
-        "commodities" : [dict(r) for r in rows],
+        "district"   : district_name,
+        "commodities": [dict(r) for r in rows],
     }
