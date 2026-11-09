@@ -15,8 +15,14 @@ import os
 import logging
 import sys
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from api.db_config import build_db_config
+
+load_dotenv(PROJECT_ROOT / "api" / ".env")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,13 +31,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-DB_CONFIG = {
-    "host"    : os.getenv("DB_HOST",     "aws-0-eu-west-1.pooler.supabase.com"),
-    "port"    : int(os.getenv("DB_PORT", "5432")),
-    "dbname"  : os.getenv("DB_NAME",     "postgres"),
-    "user"    : os.getenv("DB_USER",     "postgres.dnqtmkkuqrkcyavysobm"),
-    "password": os.getenv("DB_PASSWORD", "dalitsokamphani"),
-}
+DB_CONFIG = build_db_config("psycopg2")
 
 def run_backfill():
     log.info("=" * 60)

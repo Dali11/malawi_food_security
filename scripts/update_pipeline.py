@@ -14,8 +14,14 @@ import logging
 from datetime import datetime
 from io import StringIO
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from api.db_config import build_db_config
+
+load_dotenv(PROJECT_ROOT / "api" / ".env")
 
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 os.makedirs(log_dir, exist_ok=True)
@@ -38,13 +44,7 @@ WFP_URL = (
     "wfp_food_prices_mwi.csv"
 )
 
-DB_CONFIG = {
-    "host"    : os.getenv("DB_HOST",     "aws-0-eu-west-1.pooler.supabase.com"),
-    "port"    : int(os.getenv("DB_PORT", "5432")),
-    "dbname"  : os.getenv("DB_NAME",     "postgres"),
-    "user"    : os.getenv("DB_USER",     "postgres.dnqtmkkuqrkcyavysobm"),
-    "password": os.getenv("DB_PASSWORD", "dalitsokamphani"),
-}
+DB_CONFIG = build_db_config("psycopg2")
 
 FOOD_CATEGORIES = [
     'cereals and tubers',
