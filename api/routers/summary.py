@@ -10,6 +10,12 @@ from api.database import get_pool
 router = APIRouter(prefix="/api/summary", tags=["Summary"])
 
 
+def format_analysis_period(latest_date) -> str:
+    if latest_date is None:
+        return "No available data"
+    return f"January 2020 – {latest_date.strftime('%B %Y')}"
+
+
 @router.get("/")
 async def get_summary():
     """
@@ -71,8 +77,10 @@ async def get_summary():
             ) gaps
         """)
 
+        latest_date = await conn.fetchval("SELECT MAX(date)::date FROM prices")
+
     return {
-        "analysis_period"   : "January 2020 – April 2026",
+        "analysis_period"   : format_analysis_period(latest_date),
         "total_markets"     : market_count,
         "total_districts"   : 28,
         "spike_events": {

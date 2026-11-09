@@ -107,6 +107,12 @@ def get_existing_informal_keys(conn) -> set:
 # STEP 3 — Clean & split: new rows vs already-known rows
 # ─────────────────────────────────────────────────────────────────────────────
 
+def latest_data_date(df: pd.DataFrame) -> str:
+    if df.empty:
+        return ""
+    return pd.to_datetime(df['date']).max().date().isoformat()
+
+
 def clean_new_data(df_raw: pd.DataFrame, existing_keys: set):
     """
     Returns (new_rows, df_standard, df_informal).
@@ -633,6 +639,7 @@ def run_pipeline():
 
         # --- Split into new standardised rows, full standard, and informal ---
         df_new, df_standard, df_informal = clean_new_data(df_raw, existing_keys)
+        stats['latest_date'] = latest_data_date(df_standard)
 
         # --- If no new standardised rows, check for price revisions ---
         if len(df_new) == 0:
@@ -668,7 +675,6 @@ def run_pipeline():
         stats['new_spikes']   = len(new_spikes)
         stats['new_critical'] = len(new_critical)
         stats['new_informal'] = informal_inserted
-        stats['latest_date']  = str(df_processed['date'].max())
         stats['status']       = 'success'
 
         log_pipeline_run(conn, stats)

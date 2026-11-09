@@ -56,6 +56,28 @@ class TestPipelineRunLogging(unittest.TestCase):
         self.assertEqual(result.iloc[0]["commodity"], "Maize")
         self.assertEqual(float(result.iloc[0]["price"]), 12.0)
 
+    def test_latest_date_uses_full_source_data_when_only_older_rows_are_revised(self):
+        import pandas as pd
+
+        source = pd.DataFrame({"date": pd.to_datetime(["2026-03-15", "2026-11-15"])})
+
+        self.assertEqual(pipeline.latest_data_date(source), "2026-11-15")
+
+    def test_analysis_period_ends_at_latest_loaded_month(self):
+        from datetime import date
+
+        summary_path = Path(__file__).resolve().parents[1] / "api" / "routers" / "summary.py"
+        summary_spec = importlib.util.spec_from_file_location("summary_under_test", summary_path)
+        if summary_spec is None or summary_spec.loader is None:
+            raise RuntimeError(f"Could not load summary module from {summary_path}")
+        summary = importlib.util.module_from_spec(summary_spec)
+        summary_spec.loader.exec_module(summary)
+
+        self.assertEqual(
+            summary.format_analysis_period(date(2026, 11, 15)),
+            "January 2020 – November 2026",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
