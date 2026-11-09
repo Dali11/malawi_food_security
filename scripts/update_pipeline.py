@@ -567,24 +567,6 @@ def log_pipeline_run(conn, stats: dict) -> None:
     conn.rollback()
     with conn.cursor() as cur:
         cur.execute("""
-                    CREATE TABLE IF NOT EXISTS pipeline_log (
-                                                                id           SERIAL PRIMARY KEY,
-                                                                run_at       TIMESTAMP DEFAULT NOW(),
-                        new_records  INTEGER,
-                        new_spikes   INTEGER,
-                        new_critical INTEGER,
-                        new_informal INTEGER,
-                        latest_date  TEXT,
-                        status       TEXT,
-                        notes        TEXT
-                        )
-                    """)
-        # Add column if it doesn't exist yet (handles existing tables)
-        cur.execute("""
-                    ALTER TABLE pipeline_log
-                        ADD COLUMN IF NOT EXISTS new_informal INTEGER
-                    """)
-        cur.execute("""
                     INSERT INTO pipeline_log
                     (new_records, new_spikes, new_critical, new_informal, latest_date, status, notes)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
