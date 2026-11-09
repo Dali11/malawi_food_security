@@ -38,6 +38,24 @@ class TestPipelineRunLogging(unittest.TestCase):
         self.assertEqual(cursor.execute.call_args.args[1], (7, 2, 1, 3, "2026-11-15", "success", "refreshed"))
         conn.commit.assert_called_once_with()
 
+    def test_spike_detection_returns_only_revised_composite_keys(self):
+        import pandas as pd
+
+        date = pd.Timestamp("2026-03-15")
+        history = pd.DataFrame([
+            {"date": date, "district": "D1", "market": "M1", "commodity": "Maize", "unit": "KG", "price": 10.0, "region": "R", "is_spike": False, "spike_severity": "Normal"},
+            {"date": date, "district": "D1", "market": "M1", "commodity": "Beans", "unit": "KG", "price": 20.0, "region": "R", "is_spike": False, "spike_severity": "Normal"},
+        ])
+        revised = pd.DataFrame([
+            {"date": date, "district": "D1", "market": "M1", "commodity": "Maize", "unit": "KG", "price": 12.0, "region": "R", "is_spike": False, "spike_severity": "Normal"},
+        ])
+
+        result = pipeline.detect_spikes(revised, history)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.iloc[0]["commodity"], "Maize")
+        self.assertEqual(float(result.iloc[0]["price"]), 12.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -243,15 +243,32 @@ def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFram
     df_history = df_history.dropna(subset=['price'])
     df_new     = df_new.dropna(subset=['price'])
 
+    GROUP_KEY = ['district', 'market', 'commodity']
+
+    def composite_keys(frame):
+        dates = pd.to_datetime(frame['date']).dt.strftime('%Y-%m-%d')
+        return list(zip(
+            dates,
+            frame['district'],
+            frame['market'],
+            frame['commodity'],
+            frame['unit'],
+        ))
+
+    processed_keys = set(composite_keys(df_new))
+    df_history = df_history.copy()
+    df_history['_pipeline_key'] = composite_keys(df_history)
+    df_history = df_history[~df_history['_pipeline_key'].isin(processed_keys)].drop(
+        columns='_pipeline_key'
+    )
+
     df_combined = pd.concat([df_history, df_new], ignore_index=True)
     df_combined = df_combined.sort_values(
         ['district', 'market', 'commodity', 'date']
     ).reset_index(drop=True)
-
-    GROUP_KEY = ['district', 'market', 'commodity']
-
+    df_combined['_pipeline_key'] = composite_keys(df_combined)
     df_combined['pct_change'] = (
-            df_combined.groupby(GROUP_KEY)['price'].pct_change() * 100
+        df_combined.groupby(GROUP_KEY)['price'].pct_change() * 100
     )
 
     def rolling_zscore(series, window=12):
@@ -277,8 +294,8 @@ def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFram
         conditions, choices, default='Normal'
     )
 
-    new_dates = set(df_new['date'].astype(str).unique())
-    df_result = df_combined[df_combined['date'].astype(str).isin(new_dates)].copy()
+    df_result = df_combined[df_combined['_pipeline_key'].isin(processed_keys)].copy()
+    df_result = df_result.drop(columns='_pipeline_key')
 
     new_spikes = df_result[df_result['spike_severity'] != 'Normal']
     critical   = df_result[df_result['spike_severity'] == 'Critical']
