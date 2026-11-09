@@ -1,0 +1,14 @@
+services:
+  nodered:
+    image: nodered/node-red@sha256:2ccd38b4066648bd5e17430c50a2f8102c566a82fd4f2fc5c342e61664d6896f
+    container_name: nodered
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "127.0.0.1:1880:1880"
+    volumes:
+      - /opt/nodered/data:/data
+    environment:
+      TZ: Europe/Berlin
+      FLOWS: flows.json
+      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET:?NODE_RED_CREDENTIAL_SECRET must be set}

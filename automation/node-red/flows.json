@@ -1,0 +1,999 @@
+[
+  {
+    "id": "46867c076c9b08d5",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d52e3ae1f1da9ba4",
+    "type": "tab",
+    "label": "AI Assistant",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "3bf7a2282fa2230a",
+    "type": "ui-base",
+    "name": "My Dashboard",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "headerContent": "page",
+    "navigationStyle": "default",
+    "titleBarStyle": "default",
+    "showReconnectNotification": true,
+    "notificationDisplayTime": 1,
+    "showDisconnectNotification": true,
+    "allowInstall": false
+  },
+  {
+    "id": "f88f957566c4030c",
+    "type": "ui-theme",
+    "name": "Default Theme",
+    "colors": {
+      "surface": "#fcfcfd",
+      "primary": "#0d74ce",
+      "bgPage": "#f9f9fb",
+      "groupBg": "#ffffff",
+      "groupOutline": "#d9d9e0"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "4px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "b16ae258fddd459a",
+    "type": "ui-page",
+    "name": "Page 1",
+    "ui": "3bf7a2282fa2230a",
+    "path": "/page1",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "f88f957566c4030c",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": 0,
+        "cols": 3
+      },
+      {
+        "name": "Tablet",
+        "px": 576,
+        "cols": 6
+      },
+      {
+        "name": "Small Desktop",
+        "px": 768,
+        "cols": 9
+      },
+      {
+        "name": "Desktop",
+        "px": 1024,
+        "cols": 12
+      }
+    ],
+    "tabs": [],
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "f777af7be34e44d9",
+    "type": "ui-group",
+    "name": "Group 1",
+    "page": "b16ae258fddd459a",
+    "width": 6,
+    "height": 1,
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default",
+    "keepLoaded": false,
+    "tab": ""
+  },
+  {
+    "id": "4e4a94618301c9b6",
+    "type": "inject",
+    "z": "46867c076c9b08d5",
+    "name": "Ask AI",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "Hello! Introduce yourself and explain what you can do.",
+    "payloadType": "str",
+    "x": 150,
+    "y": 340,
+    "wires": [
+      [
+        "81f45eb0d24c3226"
+      ]
+    ]
+  },
+  {
+    "id": "81f45eb0d24c3226",
+    "type": "function",
+    "z": "46867c076c9b08d5",
+    "name": "Prepare AI Request",
+    "func": "const prompt = String(msg.payload);\n\nmsg.headers = {\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    model: \"qwen3:1.7b\",\n    messages: [\n        {\n            role: \"user\",\n            content: prompt\n        }\n    ],\n    think: false,\n    options: {\n        num_predict: 128\n    },\n    stream: false\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 360,
+    "wires": [
+      [
+        "190cee4e70bed818"
+      ]
+    ]
+  },
+  {
+    "id": "190cee4e70bed818",
+    "type": "http request",
+    "z": "46867c076c9b08d5",
+    "name": "Ollama AI Engine",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://10.0.0.1:11434/api/chat",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 750,
+    "y": 400,
+    "wires": [
+      [
+        "860420115f2d68be",
+        "96e33ef99c90cc1d"
+      ]
+    ]
+  },
+  {
+    "id": "860420115f2d68be",
+    "type": "debug",
+    "z": "46867c076c9b08d5",
+    "name": "AI Response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 990,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "06e525c472d2481e",
+    "type": "link in",
+    "z": "46867c076c9b08d5",
+    "name": "Receive User Message",
+    "links": [
+      "4a9fe51fde11170a"
+    ],
+    "x": 300,
+    "y": 180,
+    "wires": [
+      [
+        "81f45eb0d24c3226"
+      ]
+    ],
+    "l": true
+  },
+  {
+    "id": "96e33ef99c90cc1d",
+    "type": "link out",
+    "z": "46867c076c9b08d5",
+    "name": "Return AI Response",
+    "mode": "link",
+    "links": [
+      "dc188a489e6d6fe6"
+    ],
+    "x": 940,
+    "y": 520,
+    "wires": [],
+    "l": true
+  },
+  {
+    "id": "152c521765542ad5",
+    "type": "ui-template",
+    "z": "d52e3ae1f1da9ba4",
+    "group": "f777af7be34e44d9",
+    "page": "",
+    "ui": "",
+    "name": "AI Chat Interface",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "<template>\n  <div class=\"ai-chat\">\n\n    <header class=\"chat-header\">\n      <div class=\"brand\">\n        <div class=\"brand-icon\">\u2726</div>\n        <div>\n          <h2>AI Assistant</h2>\n          <span><i></i> Running locally \u00b7 Qwen3</span>\n        </div>\n      </div>\n      <button class=\"new-chat\" @click=\"newChat\">+ New chat</button>\n    </header>\n\n    <main class=\"chat-body\" ref=\"chatBody\">\n\n      <div v-if=\"messages.length === 0\" class=\"welcome\">\n        <div class=\"welcome-icon\">\u2726</div>\n        <h1>How can I help you today?</h1>\n        <p>Your private AI assistant, running on your own server.</p>\n\n        <div class=\"suggestions\">\n          <button @click=\"useSuggestion('Explain how AI agents work')\">\n            <span>\u2727</span> Explain AI agents\n          </button>\n          <button @click=\"useSuggestion('Help me write some Python code')\">\n            <span>\u2318</span> Write some code\n          </button>\n          <button @click=\"useSuggestion('Give me ideas for automating my business')\">\n            <span>\u2197</span> Explore automation\n          </button>\n        </div>\n      </div>\n\n      <div v-for=\"(item, index) in messages\"\n           :key=\"index\"\n           class=\"message\"\n           :class=\"item.role\">\n\n        <div class=\"avatar\">\n          {{ item.role === 'assistant' ? '\u2726' : 'Y' }}\n        </div>\n\n        <div class=\"message-content\">\n          <span class=\"sender\">\n            {{ item.role === 'assistant' ? 'AI Assistant' : 'You' }}\n          </span>\n          <p>{{ item.content }}</p>\n        </div>\n      </div>\n\n      <div v-if=\"loading\" class=\"message assistant\">\n        <div class=\"avatar\">\u2726</div>\n        <div class=\"message-content\">\n          <span class=\"sender\">AI Assistant</span>\n          <p class=\"typing\">Thinking<span>.</span><span>.</span><span>.</span></p>\n        </div>\n      </div>\n\n    </main>\n\n    <footer class=\"chat-footer\">\n      <div class=\"input-box\">\n        <textarea\n          v-model=\"draft\"\n          placeholder=\"Message your AI assistant...\"\n          rows=\"1\"\n          @keydown.enter.exact.prevent=\"sendMessage\"\n        ></textarea>\n\n        <button\n          class=\"send-button\"\n          :disabled=\"!draft.trim() || loading\"\n          @click=\"sendMessage\"\n        >\u2191</button>\n      </div>\n      <p>Powered by Ollama \u00b7 Your conversations stay on your server</p>\n    </footer>\n\n  </div>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      draft: '',\n      messages: [],\n      loading: false\n    }\n  },\n\n watch: {\n    msg(newMsg) {\n        if (!newMsg || !newMsg.payload) return;\n\n        this.messages.push({\n            role: 'assistant',\n            content: String(newMsg.payload)\n        });\n\n        this.loading = false;\n\n        this.$nextTick(() => {\n            this.scrollToBottom();\n        });\n    }\n},\n\n  methods: {\n    sendMessage() {\n      const text = this.draft.trim();\n\n      if (!text || this.loading) return;\n\n      this.messages.push({\n        role: 'user',\n        content: text\n      });\n\n      this.draft = '';\n      this.loading = true;\n      this.scrollToBottom();\n\n      this.send({\n        payload: text,\n        topic: 'user_message'\n      });\n    },\n\n    useSuggestion(text) {\n      this.draft = text;\n      this.sendMessage();\n    },\n\n    newChat() {\n      this.messages = [];\n      this.loading = false;\n      this.draft = '';\n    },\n\n    scrollToBottom() {\n      this.$nextTick(() => {\n        if (this.$refs.chatBody) {\n          this.$refs.chatBody.scrollTop =\n            this.$refs.chatBody.scrollHeight;\n        }\n      });\n    }\n  }\n}\n</script>\n\n<style>\n.ai-chat {\n  background: #101411;\n  color: #e8eee9;\n  min-height: 680px;\n  height: calc(100vh - 160px);\n  display: flex;\n  flex-direction: column;\n  border: 1px solid #27332b;\n  border-radius: 14px;\n  overflow: hidden;\n  font-family: Arial, sans-serif;\n}\n\n.chat-header {\n  height: 75px;\n  min-height: 75px;\n  padding: 0 25px;\n  border-bottom: 1px solid #29332c;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n}\n\n.brand {\n  display: flex;\n  align-items: center;\n  gap: 13px;\n}\n\n.brand-icon, .welcome-icon {\n  width: 42px;\n  height: 42px;\n  border-radius: 12px;\n  background: #173d29;\n  color: #64dc94;\n  display: grid;\n  place-items: center;\n  font-size: 23px;\n}\n\n.brand h2 {\n  margin: 0;\n  font-size: 17px;\n}\n\n.brand span {\n  font-size: 11px;\n  color: #8c9b90;\n}\n\n.brand span i {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  background: #43d483;\n  border-radius: 50%;\n  margin-right: 5px;\n}\n\n.new-chat {\n  background: #1b2d21;\n  color: #9de4b5;\n  border: 1px solid #31513b;\n  border-radius: 8px;\n  padding: 10px 15px;\n  cursor: pointer;\n}\n\n.chat-body {\n  flex: 1;\n  overflow-y: auto;\n  padding: 35px max(20px, 8%);\n}\n\n.welcome {\n  max-width: 650px;\n  margin: 80px auto 0;\n  text-align: center;\n}\n\n.welcome-icon {\n  margin: auto;\n  width: 60px;\n  height: 60px;\n  font-size: 30px;\n}\n\n.welcome h1 {\n  font-size: 27px;\n  margin: 25px 0 10px;\n}\n\n.welcome p {\n  color: #89968c;\n  font-size: 14px;\n}\n\n.suggestions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: center;\n  gap: 10px;\n  margin-top: 35px;\n}\n\n.suggestions button {\n  background: #19221b;\n  border: 1px solid #303c33;\n  color: #bdc9bf;\n  border-radius: 9px;\n  padding: 12px;\n  cursor: pointer;\n}\n\n.suggestions button span {\n  color: #65d88f;\n  margin-right: 5px;\n}\n\n.message {\n  display: flex;\n  gap: 13px;\n  margin: 25px 0;\n}\n\n.avatar {\n  width: 34px;\n  height: 34px;\n  min-width: 34px;\n  border-radius: 10px;\n  display: grid;\n  place-items: center;\n  background: #1d3b29;\n  color: #6fe19a;\n}\n\n.message.user .avatar {\n  background: #26332a;\n  color: white;\n}\n\n.message-content {\n  max-width: 85%;\n}\n\n.sender {\n  font-size: 12px;\n  color: #91a096;\n  font-weight: bold;\n}\n\n.message-content p {\n  color: #e0e9e2;\n  font-size: 14px;\n  line-height: 1.8;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.typing span {\n  animation: blink 1s infinite;\n}\n\n@keyframes blink {\n  50% { opacity: 0.2; }\n}\n\n.chat-footer {\n  padding: 15px 8% 12px;\n  border-top: 1px solid #29332c;\n}\n\n.input-box {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  background: #1a231c;\n  border: 1px solid #35463a;\n  border-radius: 12px;\n  padding: 10px;\n}\n\n.input-box textarea {\n  flex: 1;\n  background: transparent;\n  border: none;\n  outline: none;\n  resize: none;\n  color: white;\n  font-size: 14px;\n  min-height: 28px;\n  max-height: 120px;\n}\n\n.input-box textarea::placeholder {\n  color: #718077;\n}\n\n.send-button {\n  background: #39b96c;\n  color: #07140b;\n  border: none;\n  border-radius: 8px;\n  width: 36px;\n  height: 36px;\n  font-size: 23px;\n  cursor: pointer;\n}\n\n.send-button:disabled {\n  opacity: 0.35;\n  cursor: not-allowed;\n}\n\n.chat-footer > p {\n  text-align: center;\n  font-size: 10px;\n  color: #68766d;\n  margin: 10px 0 0;\n}\n\n@media(max-width: 600px) {\n  .ai-chat {\n    min-height: 600px;\n    height: calc(100vh - 120px);\n    border-radius: 0;\n  }\n\n  .chat-header {\n    padding: 0 13px;\n  }\n\n  .chat-body {\n    padding: 20px 13px;\n  }\n\n  .welcome {\n    margin-top: 55px;\n  }\n\n  .welcome h1 {\n    font-size: 22px;\n  }\n\n  .chat-footer {\n    padding: 12px;\n  }\n\n  .suggestions {\n    flex-direction: column;\n  }\n}\n</style>",
+    "noerr": 0,
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 750,
+    "y": 240,
+    "wires": [
+      [
+        "4a9fe51fde11170a"
+      ]
+    ]
+  },
+  {
+    "id": "4a9fe51fde11170a",
+    "type": "link out",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Send to AI Engine",
+    "mode": "link",
+    "links": [
+      "06e525c472d2481e"
+    ],
+    "x": 870,
+    "y": 360,
+    "wires": [],
+    "l": true
+  },
+  {
+    "id": "dc188a489e6d6fe6",
+    "type": "link in",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Receive AI Response",
+    "links": [
+      "96e33ef99c90cc1d"
+    ],
+    "x": 260,
+    "y": 180,
+    "wires": [
+      [
+        "38b7432b4cb52330",
+        "d4e1a892745c8814"
+      ]
+    ],
+    "l": true
+  },
+  {
+    "id": "38b7432b4cb52330",
+    "type": "debug",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 520,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "d4e1a892745c8814",
+    "type": "function",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Extract AI Text",
+    "func": "const payload = msg.payload;\n\nif (payload?.message?.content) {\n    msg.payload = String(payload.message.content);\n    return msg;\n}\n\nif (payload?.error) {\n    msg.payload = \"Sorry, something went wrong: \" + payload.error;\n    return msg;\n}\n\nnode.warn(\"Unexpected AI response format\");\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 500,
+    "y": 220,
+    "wires": [
+      [
+        "152c521765542ad5"
+      ]
+    ]
+  },
+  {
+    "id": "c5e096c624bfd1d1",
+    "type": "tab",
+    "label": "Malawi Food Security Automation",
+    "disabled": false,
+    "info": "Node-RED orchestrates the existing Python/FastAPI pipeline. Spike methodology remains in scripts/update_pipeline.py."
+  },
+  {
+    "id": "443d5c94d43bf582",
+    "type": "inject",
+    "z": "c5e096c624bfd1d1",
+    "name": "Weekly WFP price update \u00b7 Mon 06:00",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "0 6 * * 1",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 190,
+    "y": 120,
+    "wires": [
+      [
+        "f34bd108738de204"
+      ]
+    ]
+  },
+  {
+    "id": "f34bd108738de204",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Request the existing Python pipeline",
+    "func": "function uuid(source){let s=String(source||Date.now().toString(16)).replace(/[^a-f0-9]/ig,'').toLowerCase();s=(s+Date.now().toString(16)+'00000000000000000000000000000000').slice(0,32).padEnd(32,'0').split('');s[12]='4';s[16]='a';return s.slice(0,8).join('')+'-'+s.slice(8,12).join('')+'-'+s.slice(12,16).join('')+'-'+s.slice(16,20).join('')+'-'+s.slice(20).join('');}const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');const token=env.get('MFS_AUTOMATION_API_TOKEN')||'';const host=env.get('MFS_AUTOMATION_API_HOST')||'';msg._workflowName='wfp-price-update';msg._pipelineRequest={request_id:uuid(msg._msgid),trigger:'node-red-schedule'};msg._pipelineRetry=0;msg.url=base+'/api/automation/pipeline/run';msg.headers={Authorization:'Bearer '+token,Host:host,'Content-Type':'application/json'};msg.payload=msg._pipelineRequest;return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 465,
+    "y": 120,
+    "wires": [
+      [
+        "fd93f39584df0406"
+      ]
+    ]
+  },
+  {
+    "id": "fd93f39584df0406",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Authenticated FastAPI pipeline run",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 760,
+    "y": 120,
+    "wires": [
+      [
+        "d0ce93dbcc9bf3bb"
+      ]
+    ]
+  },
+  {
+    "id": "d0ce93dbcc9bf3bb",
+    "type": "switch",
+    "z": "c5e096c624bfd1d1",
+    "name": "Pipeline result",
+    "property": "payload.status",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "success",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "failed",
+        "vt": "str"
+      },
+      {
+        "t": "otherwise"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 3,
+    "x": 980,
+    "y": 120,
+    "wires": [
+      [
+        "70d3cd8b026e5a42"
+      ],
+      [
+        "29633c2133652e50"
+      ],
+      [
+        "29633c2133652e50"
+      ]
+    ]
+  },
+  {
+    "id": "70d3cd8b026e5a42",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Fan out Python-classified alerts",
+    "func": "const alerts=Array.isArray(msg.payload.alerts)?msg.payload.alerts:[];if(!alerts.length)return null;return alerts.map(a=>Object.assign({},msg,{payload:a}));",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1250,
+    "y": 80,
+    "wires": [
+      [
+        "ac9b67d2202d6b26"
+      ]
+    ]
+  },
+  {
+    "id": "ac9b67d2202d6b26",
+    "type": "switch",
+    "z": "c5e096c624bfd1d1",
+    "name": "Severity notification routes",
+    "property": "payload.severity",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "Moderate",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "Severe",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "Critical",
+        "vt": "str"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 3,
+    "x": 1510,
+    "y": 80,
+    "wires": [
+      [
+        "2b53009c3c3b305c"
+      ],
+      [
+        "2b53009c3c3b305c"
+      ],
+      [
+        "2b53009c3c3b305c"
+      ]
+    ]
+  },
+  {
+    "id": "2b53009c3c3b305c",
+    "type": "debug",
+    "z": "c5e096c624bfd1d1",
+    "name": "Severity event (dashboard delivery is recorded by FastAPI)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1810,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "29633c2133652e50",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Retry transient errors safely (same idempotency key)",
+    "func": "const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');const token=env.get('MFS_AUTOMATION_API_TOKEN')||'';const host=env.get('MFS_AUTOMATION_API_HOST')||'';const code=Number(msg.statusCode||0);const retryable=Boolean(msg.error)||(code>=500&&code!==502)||code===0;const tries=Number(msg._pipelineRetry||0);if(retryable&&tries<2){msg._pipelineRetry=tries+1;msg.payload=msg._pipelineRequest;msg.url=base+'/api/automation/pipeline/run';msg.headers={Authorization:'Bearer '+token,Host:host,'Content-Type':'application/json'};delete msg.statusCode;delete msg.error;return [null,msg];}const why=msg.error&&msg.error.message?msg.error.message:(msg.payload&&msg.payload.detail?msg.payload.detail:'HTTP '+(code||'request failed'));msg.url=base+'/api/automation/workflow-failure';msg.headers={Authorization:'Bearer '+token,Host:host,'Content-Type':'application/json'};msg.payload={workflow_name:'wfp-price-update',message:('Pipeline run did not complete after '+(tries+1)+' attempt(s): '+String(why)).slice(0,900)};return [msg,null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1230,
+    "y": 190,
+    "wires": [
+      [
+        "83fd074db2a6c2bd"
+      ],
+      [
+        "e5ad1ab42981df7a"
+      ]
+    ]
+  },
+  {
+    "id": "e5ad1ab42981df7a",
+    "type": "delay",
+    "z": "c5e096c624bfd1d1",
+    "name": "Wait before transient retry",
+    "pauseType": "delay",
+    "timeout": "15",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 1520,
+    "y": 190,
+    "wires": [
+      [
+        "fd93f39584df0406"
+      ]
+    ]
+  },
+  {
+    "id": "83fd074db2a6c2bd",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Record pipeline failure for dashboard administrators",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1580,
+    "y": 270,
+    "wires": [
+      [
+        "c98c72440dbbdd8e"
+      ]
+    ]
+  },
+  {
+    "id": "3f2d2771a72d2ba7",
+    "type": "inject",
+    "z": "c5e096c624bfd1d1",
+    "name": "Weekly intelligence report \u00b7 Mon 07:00",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "0 7 * * 1",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 190,
+    "y": 390,
+    "wires": [
+      [
+        "b2a239d6044f1194"
+      ]
+    ]
+  },
+  {
+    "id": "b2a239d6044f1194",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Fetch observed weekly evidence",
+    "func": "const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');msg._workflowName='weekly-situation-report';msg.url=base+'/api/automation/weekly-report/data';msg.headers={Authorization:'Bearer '+(env.get('MFS_AUTOMATION_API_TOKEN')||''),Host:env.get('MFS_AUTOMATION_API_HOST')||'',Accept:'application/json'};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 390,
+    "wires": [
+      [
+        "bd117d49fedcdfcb"
+      ]
+    ]
+  },
+  {
+    "id": "bd117d49fedcdfcb",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Read weekly price and risk evidence",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 760,
+    "y": 390,
+    "wires": [
+      [
+        "d77769a411a177a3"
+      ]
+    ]
+  },
+  {
+    "id": "d77769a411a177a3",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Ask local Ollama to explain evidence only",
+    "func": "if(Number(msg.statusCode||0)>=400)throw new Error('Weekly evidence endpoint returned HTTP '+msg.statusCode);const e=msg.payload;if(!e||!e.period_start||!e.period_end)throw new Error('Weekly evidence response was incomplete');msg._reportEvidence=e;msg._workflowName='weekly-situation-report';msg.url=env.get('MFS_OLLAMA_URL')||'http://10.0.0.1:11434/api/chat';msg.headers={'Content-Type':'application/json'};msg.payload={model:env.get('MFS_REPORT_MODEL')||'qwen3:1.7b',stream:false,messages:[{role:'system',content:'You are an evidence-grounded Malawi food price analyst. Explain only patterns explicitly supported by the supplied JSON. Do not invent statistics, dates, districts, commodities, or events. Do not claim causes or causation. If historical or risk-score comparisons are unavailable, say so. Distinguish price instability from food insecurity and describe hotspot names only as a descriptive overlap. Keep the report concise and cite the supplied values exactly.'},{role:'user',content:'Write a weekly situation report using only this evidence JSON:\n'+JSON.stringify(e)}]};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 390,
+    "wires": [
+      [
+        "6420a70502c657a9"
+      ]
+    ]
+  },
+  {
+    "id": "6420a70502c657a9",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Generate report with local Ollama",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1380,
+    "y": 390,
+    "wires": [
+      [
+        "33af70c2fc5821f7"
+      ]
+    ]
+  },
+  {
+    "id": "33af70c2fc5821f7",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Validate AI output and prepare report",
+    "func": "const e=msg._reportEvidence;const text=msg.payload&&msg.payload.message&&msg.payload.message.content?String(msg.payload.message.content).trim():'';const evidenceNumbers=new Set((JSON.stringify(e).match(/\\d+(?:[.,]\\d+)?/g)||[]).map(v=>v.replace(/,/g,'')));const outputNumbers=(text.match(/\\d+(?:[.,]\\d+)?/g)||[]).map(v=>v.replace(/,/g,''));const grounded=Boolean(text)&&outputNumbers.every(v=>evidenceNumbers.has(v));if(!grounded){msg._fallbackEvidence=e;return [null,msg];}const hex=String(msg._msgid||Date.now().toString(16)).replace(/[^a-f0-9]/ig,'').toLowerCase();let s=(hex+Date.now().toString(16)+'00000000000000000000000000000000').slice(0,32).padEnd(32,'0').split('');s[12]='4';s[16]='a';const id=s.slice(0,8).join('')+'-'+s.slice(8,12).join('')+'-'+s.slice(12,16).join('')+'-'+s.slice(16,20).join('')+'-'+s.slice(20).join('');const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');msg.url=base+'/api/automation/weekly-report';msg.headers={Authorization:'Bearer '+(env.get('MFS_AUTOMATION_API_TOKEN')||''),Host:env.get('MFS_AUTOMATION_API_HOST')||'','Content-Type':'application/json'};msg.payload={report_id:id,period_start:e.period_start,period_end:e.period_end,content:text,evidence:e,model:env.get('MFS_REPORT_MODEL')||'qwen3:1.7b'};return [msg,null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1680,
+    "y": 390,
+    "wires": [
+      [
+        "b0b5fc1b9acb01d1"
+      ],
+      [
+        "9d7c5e81f36944d4"
+      ]
+    ]
+  },
+  {
+    "id": "b0b5fc1b9acb01d1",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Store evidence-backed weekly report",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1980,
+    "y": 390,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "4b43ce2643be8248",
+    "type": "catch",
+    "z": "c5e096c624bfd1d1",
+    "name": "Use evidence-only fallback if Ollama is offline",
+    "scope": [
+      "6420a70502c657a9"
+    ],
+    "uncaught": false,
+    "x": 1410,
+    "y": 470,
+    "wires": [
+      [
+        "9d7c5e81f36944d4"
+      ]
+    ]
+  },
+  {
+    "id": "9d7c5e81f36944d4",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Build deterministic report from observed values",
+    "func": "const e=msg._fallbackEvidence||msg._reportEvidence;if(!e)throw new Error('Report evidence unavailable; failure recorded separately');const fmt=v=>v===null||v===undefined?'unavailable':String(v);const rows=(a,fn)=>Array.isArray(a)&&a.length?a.slice(0,8).map(fn).join('; '):'No observations recorded for this period.';const content=['Weekly food price situation report: '+e.period_start+' to '+e.period_end+'.','Data through: '+fmt(e.data_through)+'.','District instability (mean absolute observed price change): '+rows(e.district_instability,r=>r.district+': '+fmt(r.mean_abs_pct_change)+'% across '+fmt(r.observations)+' observations).','Commodity price changes (observed mean): '+rows(e.commodity_increases,r=>r.commodity+': '+fmt(r.mean_pct_change)+'% across '+fmt(r.observations)+' observations).','Severe and critical spike counts: '+rows(e.severe_critical_spike_counts,r=>r.severity+': '+fmt(r.event_count))+'.','Recent severe/critical event examples: '+rows(e.severe_critical_spikes,r=>r.event_date+' \u00b7 '+r.district+' \u00b7 '+r.commodity+' \u00b7 '+r.severity+' \u00b7 '+fmt(r.pct_change)+'%).','Emerging monitoring hotspots (top-five instability and top-ten risk overlap): '+(e.emerging_hotspots&&e.emerging_hotspots.length?e.emerging_hotspots.join(', '):'No overlap identified from available evidence.')+'.','District risk score changes: '+rows(e.district_risk_changes,r=>r.district+': '+fmt(r.risk_score)+' (change '+fmt(r.risk_score_change)+')')+'.','Weekly versus prior-week average prices: '+rows(e.historical_price_comparison,r=>r.commodity+': '+fmt(r.current_week_avg)+' versus '+fmt(r.prior_week_avg))+'.','Price movements are descriptive; the supplied data do not establish causation.'].join('\\n');const hex=String(msg._msgid||Date.now().toString(16)).replace(/[^a-f0-9]/ig,'').toLowerCase();let s=(hex+Date.now().toString(16)+'00000000000000000000000000000000').slice(0,32).padEnd(32,'0').split('');s[12]='4';s[16]='a';const id=s.slice(0,8).join('')+'-'+s.slice(8,12).join('')+'-'+s.slice(12,16).join('')+'-'+s.slice(16,20).join('')+'-'+s.slice(20).join('');const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');msg._workflowName='weekly-situation-report';msg.url=base+'/api/automation/weekly-report';msg.headers={Authorization:'Bearer '+(env.get('MFS_AUTOMATION_API_TOKEN')||''),Host:env.get('MFS_AUTOMATION_API_HOST')||'','Content-Type':'application/json'};msg.payload={report_id:id,period_start:e.period_start,period_end:e.period_end,content, evidence:e,model:'evidence-only-fallback'};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1700,
+    "y": 490,
+    "wires": [
+      [
+        "91122dfb60d1e362"
+      ]
+    ]
+  },
+  {
+    "id": "91122dfb60d1e362",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Store deterministic weekly report",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1990,
+    "y": 490,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c2ae28822cece0f3",
+    "type": "inject",
+    "z": "c5e096c624bfd1d1",
+    "name": "System health and Node-RED heartbeat \u00b7 60s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.5,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 210,
+    "y": 650,
+    "wires": [
+      [
+        "e75bda0cbb6dce3f"
+      ]
+    ]
+  },
+  {
+    "id": "e75bda0cbb6dce3f",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Check FastAPI and PostgreSQL readiness",
+    "func": "msg._workflowName='system-health';msg.url=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'')+'/healthz';msg.headers={Host:env.get('MFS_AUTOMATION_API_HOST')||'',Accept:'application/json'};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 510,
+    "y": 650,
+    "wires": [
+      [
+        "dd99313ad561b8da"
+      ]
+    ]
+  },
+  {
+    "id": "dd99313ad561b8da",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Probe API and private database",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 800,
+    "y": 650,
+    "wires": [
+      [
+        "ab8d18c692563937"
+      ]
+    ]
+  },
+  {
+    "id": "ab8d18c692563937",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Report Node-RED heartbeat",
+    "func": "const healthy=Number(msg.statusCode||0)===200&&msg.payload&&msg.payload.database==='healthy';const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');msg.url=base+'/api/automation/heartbeat';msg.headers={Authorization:'Bearer '+(env.get('MFS_AUTOMATION_API_TOKEN')||''),Host:env.get('MFS_AUTOMATION_API_HOST')||'','Content-Type':'application/json'};msg.payload={component:'node-red',status:healthy?'healthy':'degraded',details:'API/DB probe HTTP '+Number(msg.statusCode||0)};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1090,
+    "y": 650,
+    "wires": [
+      [
+        "80670dd6f474fe36"
+      ]
+    ]
+  },
+  {
+    "id": "80670dd6f474fe36",
+    "type": "http request",
+    "z": "c5e096c624bfd1d1",
+    "name": "Persist Node-RED health heartbeat",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1380,
+    "y": 650,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "754d3f4d52e05627",
+    "type": "catch",
+    "z": "c5e096c624bfd1d1",
+    "name": "Record report and system workflow failures",
+    "scope": [
+      "bd117d49fedcdfcb",
+      "b2a239d6044f1194",
+      "d77769a411a177a3",
+      "33af70c2fc5821f7",
+      "b0b5fc1b9acb01d1",
+      "9d7c5e81f36944d4",
+      "91122dfb60d1e362",
+      "e75bda0cbb6dce3f",
+      "dd99313ad561b8da",
+      "ab8d18c692563937",
+      "80670dd6f474fe36"
+    ],
+    "uncaught": false,
+    "x": 1210,
+    "y": 760,
+    "wires": [
+      [
+        "6e8a9ce4be3cc782"
+      ]
+    ]
+  },
+  {
+    "id": "6e8a9ce4be3cc782",
+    "type": "function",
+    "z": "c5e096c624bfd1d1",
+    "name": "Sanitize and record workflow failure",
+    "func": "const base=(env.get('MFS_AUTOMATION_API_BASE')||'').replace(/\\/$/,'');const error=msg.error&&msg.error.message?msg.error.message:'Workflow request failed';msg.url=base+'/api/automation/workflow-failure';msg.headers={Authorization:'Bearer '+(env.get('MFS_AUTOMATION_API_TOKEN')||''),Host:env.get('MFS_AUTOMATION_API_HOST')||'','Content-Type':'application/json'};msg.payload={workflow_name:String(msg._workflowName||'node-red-workflow').slice(0,120),message:String(error).slice(0,900)};return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1500,
+    "y": 760,
+    "wires": [
+      [
+        "83fd074db2a6c2bd"
+      ]
+    ]
+  },
+  {
+    "id": "585a8169d34ae3bc",
+    "type": "catch",
+    "z": "c5e096c624bfd1d1",
+    "name": "Retry or record failed pipeline requests",
+    "scope": [
+      "f34bd108738de204",
+      "fd93f39584df0406"
+    ],
+    "uncaught": false,
+    "x": 980,
+    "y": 250,
+    "wires": [
+      [
+        "29633c2133652e50"
+      ]
+    ]
+  },
+  {
+    "id": "c98c72440dbbdd8e",
+    "type": "debug",
+    "z": "c5e096c624bfd1d1",
+    "name": "Workflow failure receipt",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1840,
+    "y": 760,
+    "wires": []
+  }
+]

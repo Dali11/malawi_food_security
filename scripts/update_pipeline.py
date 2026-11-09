@@ -273,6 +273,7 @@ def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFram
         ['district', 'market', 'commodity', 'date']
     ).reset_index(drop=True)
     df_combined['_pipeline_key'] = composite_keys(df_combined)
+    df_combined['previous_price'] = df_combined.groupby(GROUP_KEY)['price'].shift(1)
     df_combined['pct_change'] = (
         df_combined.groupby(GROUP_KEY)['price'].pct_change() * 100
     )
@@ -315,6 +316,29 @@ def detect_spikes(df_new: pd.DataFrame, df_history: pd.DataFrame) -> pd.DataFram
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 7 — Upsert into prices table
 # ─────────────────────────────────────────────────────────────────────────────
+
+def extract_alert_events(df_processed: pd.DataFrame) -> list[dict]:
+    """Expose Python-classified events for authenticated alert persistence."""
+    alert_rows = df_processed[
+        df_processed['spike_severity'].isin(['Moderate', 'Severe', 'Critical'])
+    ]
+    events = []
+    for _, row in alert_rows.iterrows():
+        previous = row.get('previous_price')
+        events.append({
+            'event_date': pd.to_datetime(row['date']).date().isoformat(),
+            'district': str(row['district']),
+            'market': str(row['market']),
+            'commodity': str(row['commodity']),
+            'unit': str(row['unit']),
+            'previous_price': float(previous) if pd.notna(previous) else None,
+            'current_price': float(row['price']),
+            'pct_change': float(row['pct_change']) if pd.notna(row['pct_change']) else 0.0,
+            'zscore': float(row['zscore']) if pd.notna(row['zscore']) else 0.0,
+            'severity': str(row['spike_severity']),
+        })
+    return events
+
 
 def insert_new_data(conn, df_new: pd.DataFrame) -> int:
     if len(df_new) == 0:
@@ -621,7 +645,8 @@ def run_pipeline():
         'new_informal': 0,
         'latest_date' : '',
         'status'      : 'success',
-        'notes'       : ''
+        'notes'       : '',
+        'events'      : [],
     }
 
     conn = None
@@ -657,6 +682,7 @@ def run_pipeline():
         # --- Run spike detection with full historical context ---
         df_history   = load_historical_data(conn)
         df_processed = detect_spikes(df_new, df_history)
+        stats['events'] = extract_alert_events(df_processed)
 
         # --- Upsert into prices (handles both new rows and revisions) ---
         inserted = insert_new_data(conn, df_processed)

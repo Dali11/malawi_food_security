@@ -4,9 +4,9 @@ FastAPI application entry point.
 Malawi Food Security GIS API — Phase 4
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from api.database import connect, disconnect
+from api.database import connect, disconnect, get_pool
 from api.routers import (
     districts,
     markets,
@@ -21,6 +21,7 @@ from api.routers import (
     heatmap,
     season_baseline,
     indicators,
+    automation,
 )
 
 # ── App setup ──────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ app.include_router(pipeline.router)
 app.include_router(heatmap.router)
 app.include_router(season_baseline.router)
 app.include_router(indicators.router)
+app.include_router(automation.router)
 
 # ── Compatibility endpoint for frontend (legacy route) ────────────────────────
 @app.get("/api/season/calendar")
@@ -70,6 +72,18 @@ async def season_calendar_compat():
     """Frontend expects /api/season/calendar - maps to new season_baseline endpoint"""
     from api.routers.season_baseline import get_crop_calendar
     return await get_crop_calendar()
+
+# ── Readiness check for Coolify and external monitors ─────────────────────────
+@app.get("/healthz", tags=["Health"])
+async def readiness():
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
+    return {"status": "healthy", "database": "healthy"}
+
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])

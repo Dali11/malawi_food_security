@@ -10,7 +10,7 @@ export interface GeoJSONPolygon {
 }
 
 interface HeaderProps {
-    activePage?: "dashboard" | "forecast" | "heatmap" | "season" | "indicators" | "reports"
+    activePage?: "dashboard" | "forecast" | "heatmap" | "season" | "indicators" | "reports" | "automation"
 }
 
 // ── Base Map─────────────────────────────────────────

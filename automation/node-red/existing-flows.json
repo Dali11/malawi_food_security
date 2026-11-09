@@ -1,0 +1,324 @@
+[
+  {
+    "id": "46867c076c9b08d5",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d52e3ae1f1da9ba4",
+    "type": "tab",
+    "label": "AI Assistant",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "3bf7a2282fa2230a",
+    "type": "ui-base",
+    "name": "My Dashboard",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "headerContent": "page",
+    "navigationStyle": "default",
+    "titleBarStyle": "default",
+    "showReconnectNotification": true,
+    "notificationDisplayTime": 1,
+    "showDisconnectNotification": true,
+    "allowInstall": false
+  },
+  {
+    "id": "f88f957566c4030c",
+    "type": "ui-theme",
+    "name": "Default Theme",
+    "colors": {
+      "surface": "#fcfcfd",
+      "primary": "#0d74ce",
+      "bgPage": "#f9f9fb",
+      "groupBg": "#ffffff",
+      "groupOutline": "#d9d9e0"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "4px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "b16ae258fddd459a",
+    "type": "ui-page",
+    "name": "Page 1",
+    "ui": "3bf7a2282fa2230a",
+    "path": "/page1",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "f88f957566c4030c",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": 0,
+        "cols": 3
+      },
+      {
+        "name": "Tablet",
+        "px": 576,
+        "cols": 6
+      },
+      {
+        "name": "Small Desktop",
+        "px": 768,
+        "cols": 9
+      },
+      {
+        "name": "Desktop",
+        "px": 1024,
+        "cols": 12
+      }
+    ],
+    "tabs": [],
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "f777af7be34e44d9",
+    "type": "ui-group",
+    "name": "Group 1",
+    "page": "b16ae258fddd459a",
+    "width": 6,
+    "height": 1,
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default",
+    "keepLoaded": false,
+    "tab": ""
+  },
+  {
+    "id": "4e4a94618301c9b6",
+    "type": "inject",
+    "z": "46867c076c9b08d5",
+    "name": "Ask AI",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "Hello! Introduce yourself and explain what you can do.",
+    "payloadType": "str",
+    "x": 150,
+    "y": 340,
+    "wires": [
+      [
+        "81f45eb0d24c3226"
+      ]
+    ]
+  },
+  {
+    "id": "81f45eb0d24c3226",
+    "type": "function",
+    "z": "46867c076c9b08d5",
+    "name": "Prepare AI Request",
+    "func": "const prompt = String(msg.payload);\n\nmsg.headers = {\n    \"Content-Type\": \"application/json\"\n};\n\nmsg.payload = {\n    model: \"qwen3:1.7b\",\n    messages: [\n        {\n            role: \"user\",\n            content: prompt\n        }\n    ],\n    think: false,\n    options: {\n        num_predict: 128\n    },\n    stream: false\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 360,
+    "wires": [
+      [
+        "190cee4e70bed818"
+      ]
+    ]
+  },
+  {
+    "id": "190cee4e70bed818",
+    "type": "http request",
+    "z": "46867c076c9b08d5",
+    "name": "Ollama AI Engine",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://10.0.0.1:11434/api/chat",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 750,
+    "y": 400,
+    "wires": [
+      [
+        "860420115f2d68be",
+        "96e33ef99c90cc1d"
+      ]
+    ]
+  },
+  {
+    "id": "860420115f2d68be",
+    "type": "debug",
+    "z": "46867c076c9b08d5",
+    "name": "AI Response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 990,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "06e525c472d2481e",
+    "type": "link in",
+    "z": "46867c076c9b08d5",
+    "name": "Receive User Message",
+    "links": [
+      "4a9fe51fde11170a"
+    ],
+    "x": 300,
+    "y": 180,
+    "wires": [
+      [
+        "81f45eb0d24c3226"
+      ]
+    ],
+    "l": true
+  },
+  {
+    "id": "96e33ef99c90cc1d",
+    "type": "link out",
+    "z": "46867c076c9b08d5",
+    "name": "Return AI Response",
+    "mode": "link",
+    "links": [
+      "dc188a489e6d6fe6"
+    ],
+    "x": 940,
+    "y": 520,
+    "wires": [],
+    "l": true
+  },
+  {
+    "id": "152c521765542ad5",
+    "type": "ui-template",
+    "z": "d52e3ae1f1da9ba4",
+    "group": "f777af7be34e44d9",
+    "page": "",
+    "ui": "",
+    "name": "AI Chat Interface",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "<template>\n  <div class=\"ai-chat\">\n\n    <header class=\"chat-header\">\n      <div class=\"brand\">\n        <div class=\"brand-icon\">\u2726</div>\n        <div>\n          <h2>AI Assistant</h2>\n          <span><i></i> Running locally \u00b7 Qwen3</span>\n        </div>\n      </div>\n      <button class=\"new-chat\" @click=\"newChat\">+ New chat</button>\n    </header>\n\n    <main class=\"chat-body\" ref=\"chatBody\">\n\n      <div v-if=\"messages.length === 0\" class=\"welcome\">\n        <div class=\"welcome-icon\">\u2726</div>\n        <h1>How can I help you today?</h1>\n        <p>Your private AI assistant, running on your own server.</p>\n\n        <div class=\"suggestions\">\n          <button @click=\"useSuggestion('Explain how AI agents work')\">\n            <span>\u2727</span> Explain AI agents\n          </button>\n          <button @click=\"useSuggestion('Help me write some Python code')\">\n            <span>\u2318</span> Write some code\n          </button>\n          <button @click=\"useSuggestion('Give me ideas for automating my business')\">\n            <span>\u2197</span> Explore automation\n          </button>\n        </div>\n      </div>\n\n      <div v-for=\"(item, index) in messages\"\n           :key=\"index\"\n           class=\"message\"\n           :class=\"item.role\">\n\n        <div class=\"avatar\">\n          {{ item.role === 'assistant' ? '\u2726' : 'Y' }}\n        </div>\n\n        <div class=\"message-content\">\n          <span class=\"sender\">\n            {{ item.role === 'assistant' ? 'AI Assistant' : 'You' }}\n          </span>\n          <p>{{ item.content }}</p>\n        </div>\n      </div>\n\n      <div v-if=\"loading\" class=\"message assistant\">\n        <div class=\"avatar\">\u2726</div>\n        <div class=\"message-content\">\n          <span class=\"sender\">AI Assistant</span>\n          <p class=\"typing\">Thinking<span>.</span><span>.</span><span>.</span></p>\n        </div>\n      </div>\n\n    </main>\n\n    <footer class=\"chat-footer\">\n      <div class=\"input-box\">\n        <textarea\n          v-model=\"draft\"\n          placeholder=\"Message your AI assistant...\"\n          rows=\"1\"\n          @keydown.enter.exact.prevent=\"sendMessage\"\n        ></textarea>\n\n        <button\n          class=\"send-button\"\n          :disabled=\"!draft.trim() || loading\"\n          @click=\"sendMessage\"\n        >\u2191</button>\n      </div>\n      <p>Powered by Ollama \u00b7 Your conversations stay on your server</p>\n    </footer>\n\n  </div>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      draft: '',\n      messages: [],\n      loading: false\n    }\n  },\n\n watch: {\n    msg(newMsg) {\n        if (!newMsg || !newMsg.payload) return;\n\n        this.messages.push({\n            role: 'assistant',\n            content: String(newMsg.payload)\n        });\n\n        this.loading = false;\n\n        this.$nextTick(() => {\n            this.scrollToBottom();\n        });\n    }\n},\n\n  methods: {\n    sendMessage() {\n      const text = this.draft.trim();\n\n      if (!text || this.loading) return;\n\n      this.messages.push({\n        role: 'user',\n        content: text\n      });\n\n      this.draft = '';\n      this.loading = true;\n      this.scrollToBottom();\n\n      this.send({\n        payload: text,\n        topic: 'user_message'\n      });\n    },\n\n    useSuggestion(text) {\n      this.draft = text;\n      this.sendMessage();\n    },\n\n    newChat() {\n      this.messages = [];\n      this.loading = false;\n      this.draft = '';\n    },\n\n    scrollToBottom() {\n      this.$nextTick(() => {\n        if (this.$refs.chatBody) {\n          this.$refs.chatBody.scrollTop =\n            this.$refs.chatBody.scrollHeight;\n        }\n      });\n    }\n  }\n}\n</script>\n\n<style>\n.ai-chat {\n  background: #101411;\n  color: #e8eee9;\n  min-height: 680px;\n  height: calc(100vh - 160px);\n  display: flex;\n  flex-direction: column;\n  border: 1px solid #27332b;\n  border-radius: 14px;\n  overflow: hidden;\n  font-family: Arial, sans-serif;\n}\n\n.chat-header {\n  height: 75px;\n  min-height: 75px;\n  padding: 0 25px;\n  border-bottom: 1px solid #29332c;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n}\n\n.brand {\n  display: flex;\n  align-items: center;\n  gap: 13px;\n}\n\n.brand-icon, .welcome-icon {\n  width: 42px;\n  height: 42px;\n  border-radius: 12px;\n  background: #173d29;\n  color: #64dc94;\n  display: grid;\n  place-items: center;\n  font-size: 23px;\n}\n\n.brand h2 {\n  margin: 0;\n  font-size: 17px;\n}\n\n.brand span {\n  font-size: 11px;\n  color: #8c9b90;\n}\n\n.brand span i {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  background: #43d483;\n  border-radius: 50%;\n  margin-right: 5px;\n}\n\n.new-chat {\n  background: #1b2d21;\n  color: #9de4b5;\n  border: 1px solid #31513b;\n  border-radius: 8px;\n  padding: 10px 15px;\n  cursor: pointer;\n}\n\n.chat-body {\n  flex: 1;\n  overflow-y: auto;\n  padding: 35px max(20px, 8%);\n}\n\n.welcome {\n  max-width: 650px;\n  margin: 80px auto 0;\n  text-align: center;\n}\n\n.welcome-icon {\n  margin: auto;\n  width: 60px;\n  height: 60px;\n  font-size: 30px;\n}\n\n.welcome h1 {\n  font-size: 27px;\n  margin: 25px 0 10px;\n}\n\n.welcome p {\n  color: #89968c;\n  font-size: 14px;\n}\n\n.suggestions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: center;\n  gap: 10px;\n  margin-top: 35px;\n}\n\n.suggestions button {\n  background: #19221b;\n  border: 1px solid #303c33;\n  color: #bdc9bf;\n  border-radius: 9px;\n  padding: 12px;\n  cursor: pointer;\n}\n\n.suggestions button span {\n  color: #65d88f;\n  margin-right: 5px;\n}\n\n.message {\n  display: flex;\n  gap: 13px;\n  margin: 25px 0;\n}\n\n.avatar {\n  width: 34px;\n  height: 34px;\n  min-width: 34px;\n  border-radius: 10px;\n  display: grid;\n  place-items: center;\n  background: #1d3b29;\n  color: #6fe19a;\n}\n\n.message.user .avatar {\n  background: #26332a;\n  color: white;\n}\n\n.message-content {\n  max-width: 85%;\n}\n\n.sender {\n  font-size: 12px;\n  color: #91a096;\n  font-weight: bold;\n}\n\n.message-content p {\n  color: #e0e9e2;\n  font-size: 14px;\n  line-height: 1.8;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.typing span {\n  animation: blink 1s infinite;\n}\n\n@keyframes blink {\n  50% { opacity: 0.2; }\n}\n\n.chat-footer {\n  padding: 15px 8% 12px;\n  border-top: 1px solid #29332c;\n}\n\n.input-box {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  background: #1a231c;\n  border: 1px solid #35463a;\n  border-radius: 12px;\n  padding: 10px;\n}\n\n.input-box textarea {\n  flex: 1;\n  background: transparent;\n  border: none;\n  outline: none;\n  resize: none;\n  color: white;\n  font-size: 14px;\n  min-height: 28px;\n  max-height: 120px;\n}\n\n.input-box textarea::placeholder {\n  color: #718077;\n}\n\n.send-button {\n  background: #39b96c;\n  color: #07140b;\n  border: none;\n  border-radius: 8px;\n  width: 36px;\n  height: 36px;\n  font-size: 23px;\n  cursor: pointer;\n}\n\n.send-button:disabled {\n  opacity: 0.35;\n  cursor: not-allowed;\n}\n\n.chat-footer > p {\n  text-align: center;\n  font-size: 10px;\n  color: #68766d;\n  margin: 10px 0 0;\n}\n\n@media(max-width: 600px) {\n  .ai-chat {\n    min-height: 600px;\n    height: calc(100vh - 120px);\n    border-radius: 0;\n  }\n\n  .chat-header {\n    padding: 0 13px;\n  }\n\n  .chat-body {\n    padding: 20px 13px;\n  }\n\n  .welcome {\n    margin-top: 55px;\n  }\n\n  .welcome h1 {\n    font-size: 22px;\n  }\n\n  .chat-footer {\n    padding: 12px;\n  }\n\n  .suggestions {\n    flex-direction: column;\n  }\n}\n</style>",
+    "noerr": 0,
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 750,
+    "y": 240,
+    "wires": [
+      [
+        "4a9fe51fde11170a"
+      ]
+    ]
+  },
+  {
+    "id": "4a9fe51fde11170a",
+    "type": "link out",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Send to AI Engine",
+    "mode": "link",
+    "links": [
+      "06e525c472d2481e"
+    ],
+    "x": 870,
+    "y": 360,
+    "wires": [],
+    "l": true
+  },
+  {
+    "id": "dc188a489e6d6fe6",
+    "type": "link in",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Receive AI Response",
+    "links": [
+      "96e33ef99c90cc1d"
+    ],
+    "x": 260,
+    "y": 180,
+    "wires": [
+      [
+        "38b7432b4cb52330",
+        "d4e1a892745c8814"
+      ]
+    ],
+    "l": true
+  },
+  {
+    "id": "38b7432b4cb52330",
+    "type": "debug",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "debug 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 520,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "d4e1a892745c8814",
+    "type": "function",
+    "z": "d52e3ae1f1da9ba4",
+    "name": "Extract AI Text",
+    "func": "const payload = msg.payload;\n\nif (payload?.message?.content) {\n    msg.payload = String(payload.message.content);\n    return msg;\n}\n\nif (payload?.error) {\n    msg.payload = \"Sorry, something went wrong: \" + payload.error;\n    return msg;\n}\n\nnode.warn(\"Unexpected AI response format\");\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 500,
+    "y": 220,
+    "wires": [
+      [
+        "152c521765542ad5"
+      ]
+    ]
+  }
+]
